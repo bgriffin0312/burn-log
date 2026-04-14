@@ -3,15 +3,16 @@
 const UI = {
   // ── SVG Calorie Ring ──
 
-  renderCalorieRing(current, goal) {
+  renderCalorieRing(current, goal, burned) {
+    const effectiveGoal = goal + (burned || 0);
     const radius = 70;
     const stroke = 10;
     const circumference = 2 * Math.PI * radius;
-    const pct = Math.min(current / goal, 1.5);
+    const pct = Math.min(current / effectiveGoal, 1.5);
     const offset = circumference - (Math.min(pct, 1) * circumference);
-    const over = current > goal;
+    const over = current > effectiveGoal;
     const ringColor = over ? "#ef4444" : "#a3e635";
-    const remaining = Math.max(goal - current, 0);
+    const remaining = Math.max(effectiveGoal - current, 0);
 
     return `
       <div class="calorie-ring-wrap">
@@ -33,9 +34,10 @@ const UI = {
         <div class="calorie-ring-text">
           <span class="cal-count ${over ? 'over' : ''}">${Math.round(current)}</span>
           <span class="cal-unit">kcal</span>
-          <span class="cal-remaining">${over ? Math.round(current - goal) + ' over' : Math.round(remaining) + ' left'}</span>
+          <span class="cal-remaining">${over ? Math.round(current - effectiveGoal) + ' over' : Math.round(remaining) + ' left'}</span>
         </div>
       </div>
+      ${burned > 0 ? `<div class="calorie-goal-note">${goal} base + ${Math.round(burned)} burned = ${Math.round(effectiveGoal)} budget</div>` : ''}
     `;
   },
 
@@ -135,40 +137,129 @@ const UI = {
     `;
   },
 
+  // ── Burn Section ──
+
+  renderBurnSection(burns, burnPresets, isToday) {
+    const totalBurned = burns.reduce((sum, b) => sum + (b.calories || 0), 0);
+
+    return `
+      <div class="burn-section">
+        <h2>Extra Burns${totalBurned > 0 ? ` (${Math.round(totalBurned)} kcal)` : ''}</h2>
+        <p class="burn-note">Beyond your ~6k steps baseline</p>
+        ${isToday ? `
+        <form id="burn-form">
+          <input type="text" id="burn-input" placeholder="e.g. 45 min walk, 1 hr cycling..." autocomplete="off">
+          <button type="submit" class="burn-add-btn">+</button>
+        </form>
+        ${Object.keys(burnPresets).length > 0 ? `
+        <div class="burn-chips">
+          ${Object.entries(burnPresets).map(([key, p]) =>
+            `<button class="burn-chip" data-key="${key}">${p.name} (${Math.round(p.calories)})</button>`
+          ).join('')}
+        </div>
+        ` : ''}
+        ` : ''}
+        ${burns.length > 0 ? `
+        <div class="burn-list">
+          ${burns.map(b => `
+            <div class="burn-entry" data-id="${b.id}">
+              <span class="burn-name">${b.name}</span>
+              <span class="burn-cal">${Math.round(b.calories)} kcal</span>
+              ${isToday ? `
+                <button class="save-burn-preset" data-id="${b.id}" title="Save as shortcut">&#x1F4BE;</button>
+                <button class="delete-burn" data-id="${b.id}">&times;</button>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+      </div>
+    `;
+  },
+
+  // ── Feedback Card ──
+
+  renderFeedback(feedback, feedbackLoading, isToday) {
+    if (feedbackLoading) {
+      return `<div class="feedback-card"><p class="feedback-loading">Checking in...</p></div>`;
+    }
+
+    if (feedback) {
+      return `
+        <div class="feedback-card">
+          <div class="feedback-header">
+            <span class="feedback-title">Daily Check-in</span>
+            <button id="dismiss-feedback" class="feedback-dismiss">&times;</button>
+          </div>
+          <p class="feedback-text">${feedback.feedback}</p>
+          ${(feedback.highlights && feedback.highlights.length > 0) ? `
+          <div class="feedback-chips">
+            ${feedback.highlights.map(h => `<span class="feedback-chip highlight">${h}</span>`).join('')}
+          </div>` : ''}
+          ${(feedback.concerns && feedback.concerns.length > 0) ? `
+          <div class="feedback-chips">
+            ${feedback.concerns.map(c => `<span class="feedback-chip concern">${c}</span>`).join('')}
+          </div>` : ''}
+        </div>
+      `;
+    }
+
+    // Show the button only on today view
+    if (isToday) {
+      return `<button id="feedback-btn" class="feedback-trigger">Day Review</button>`;
+    }
+    return '';
+  },
+
   // ── Full Page Render ──
 
   renderApp(state) {
-    const { currentDate, entries, customPresets } = state;
+    const { currentDate, entries, burns, burnPresets, customPresets, feedback, feedbackLoading, activeTab } = state;
     const totals = calcTotals(entries);
+    const totalBurned = (burns || []).reduce((sum, b) => sum + (b.calories || 0), 0);
     const isToday = currentDate === todayString();
+    const tab = activeTab || "log";
 
     return `
       <div class="app-shell">
         <header class="app-header">
           <h1>Burn Log</h1>
+          <div class="tab-bar">
+            <button class="tab ${tab === 'log' ? 'active' : ''}" data-tab="log">Log</button>
+            <button class="tab ${tab === 'trends' ? 'active' : ''}" data-tab="trends">Trends</button>
+          </div>
+        </header>
+
+        ${tab === 'log' ? `
           <div class="date-nav">
             <button id="prev-day" aria-label="Previous day">&larr;</button>
             <span class="current-date">${formatDisplayDate(currentDate)}</span>
             <button id="next-day" aria-label="Next day" ${isToday ? 'disabled' : ''}>&rarr;</button>
             ${!isToday ? '<button id="today-btn">Today</button>' : ''}
           </div>
-        </header>
 
-        <div class="dashboard">
-          ${this.renderCalorieRing(totals.calories, NUTRIENT_TARGETS.calories.goal)}
-          <div class="nutrient-bars">
-            ${this.renderNutrientBars(totals)}
+          ${this.renderFeedback(feedback, feedbackLoading, isToday)}
+
+          <div class="dashboard">
+            ${this.renderCalorieRing(totals.calories, NUTRIENT_TARGETS.calories.goal, totalBurned)}
+            <div class="nutrient-bars">
+              ${this.renderNutrientBars(totals)}
+            </div>
           </div>
-        </div>
 
-        ${isToday ? this.renderInputArea(customPresets) : ''}
+          ${isToday ? this.renderInputArea(customPresets) : ''}
 
-        <div class="entries-list">
-          <h2>Entries${entries.length > 0 ? ` (${entries.length})` : ''}</h2>
-          ${entries.length === 0
-            ? `<p class="empty">${isToday ? 'No entries yet. Tap a chip or type a food above.' : 'No entries for this day.'}</p>`
-            : entries.map(e => this.renderEntry(e, isToday)).join('')}
-        </div>
+          ${this.renderBurnSection(burns || [], burnPresets || {}, isToday)}
+
+          <div class="entries-list">
+            <h2>Entries${entries.length > 0 ? ` (${entries.length})` : ''}</h2>
+            ${entries.length === 0
+              ? `<p class="empty">${isToday ? 'No entries yet. Tap a chip or type a food above.' : 'No entries for this day.'}</p>`
+              : entries.map(e => this.renderEntry(e, isToday)).join('')}
+          </div>
+        ` : `
+          <div id="trends-container" class="trends-container"></div>
+        `}
       </div>
     `;
   }

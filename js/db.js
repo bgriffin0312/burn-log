@@ -109,6 +109,46 @@ async function updateDailyTarget(metric, goal) {
   return data[0];
 }
 
+// ── Burn Entries ──
+
+async function addBurnEntry(entry) {
+  const { data, error } = await db
+    .from("burn_entries")
+    .insert([entry])
+    .select();
+  if (error) throw error;
+  return data[0];
+}
+
+async function getBurnsForDate(date) {
+  const { data, error } = await db
+    .from("burn_entries")
+    .select("*")
+    .eq("date", date)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+async function getBurnsForDateRange(startDate, endDate) {
+  const { data, error } = await db
+    .from("burn_entries")
+    .select("*")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+async function deleteBurnEntry(id) {
+  const { error } = await db
+    .from("burn_entries")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
 // ── Helpers ──
 
 function todayString() {

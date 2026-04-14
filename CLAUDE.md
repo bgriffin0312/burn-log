@@ -409,6 +409,15 @@ Users should be prompted to enter their Supabase credentials and Claude API key 
 - Settings page for API keys and target adjustments
 - Test: can install to phone home screen, works offline for presets
 
+### Session 7: Garmin integration
+- Connect to Garmin data for automatic activity/burn tracking (replaces manual burn entry)
+- Options to investigate: Garmin Connect API (OAuth), or third-party bridges (e.g., Strava API, Garmin → Google Fit → web, or services like Fitnessyncer/Runalyze that expose Garmin data via API)
+- Pull daily step count, active calories, and workouts
+- Auto-populate burn_entries from Garmin data (only count extra calories beyond the ~6k steps/day baseline baked into the calorie target)
+- Show Garmin activity summary on dashboard (steps, active minutes)
+- Fallback: manual entry still available if Garmin sync is unavailable
+- Test: Garmin workout/walk data appears automatically as burn entries
+
 ## Important Notes
 
 - **No framework.** Vanilla JS only. Keep it simple.

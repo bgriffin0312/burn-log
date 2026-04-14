@@ -73,9 +73,13 @@ async function buildMessageContent(text, photoFile) {
 }
 
 const CLAUDE_BURN_PROMPT = `You are a concise exercise calorie estimator for a 49-year-old man, 5'10", 215 lbs. Respond ONLY with valid JSON, no markdown fences.
-Format: { "name": "Activity name", "calories": 300, "notes": "brief note if needed" }
-Estimate NET extra calories burned by the activity (above resting metabolic rate — do not include BMR calories that would be burned anyway).
-Be realistic. If duration or intensity is unclear, assume moderate effort and note your assumption.`;
+Format: { "name": "Activity name", "activity_type": "running", "duration_mins": 30, "calories": 390, "steps": 3500, "notes": "brief note if needed" }
+- activity_type: one of "running", "walking", "cycling", "strength", "cardio", "sports", "other"
+- duration_mins: estimated duration in minutes (infer from context if not stated)
+- calories: NET extra calories burned (above resting metabolic rate — do not include BMR)
+- steps: estimated step count for the activity (0 for non-step activities like cycling or strength)
+Be realistic. Running burns ~130 cal/mile at this weight. Walking burns ~80 cal/mile. Strength training burns ~200 cal/30 min.
+If duration or intensity is unclear, assume moderate effort and note your assumption.`;
 
 async function estimateBurnWithClaude(text) {
   if (!CONFIG.CLAUDE_API_KEY) {

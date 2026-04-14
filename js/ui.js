@@ -141,14 +141,18 @@ const UI = {
 
   renderBurnSection(burns, burnPresets, isToday) {
     const totalBurned = burns.reduce((sum, b) => sum + (b.calories || 0), 0);
+    const totalSteps = burns.reduce((sum, b) => sum + (b.steps || 0), 0);
 
     return `
       <div class="burn-section">
-        <h2>Extra Burns${totalBurned > 0 ? ` (${Math.round(totalBurned)} kcal)` : ''}</h2>
+        <div class="burn-header-row">
+          <h2>Exercise${totalBurned > 0 ? ` (${Math.round(totalBurned)} kcal)` : ''}</h2>
+          ${totalSteps > 0 ? `<span class="burn-steps-total">${totalSteps.toLocaleString()} steps</span>` : ''}
+        </div>
         <p class="burn-note">Beyond your ~6k steps baseline</p>
         ${isToday ? `
         <form id="burn-form">
-          <input type="text" id="burn-input" placeholder="e.g. 45 min walk, 1 hr cycling..." autocomplete="off">
+          <input type="text" id="burn-input" placeholder="e.g. ran 3 miles, 30 min strength..." autocomplete="off">
           <button type="submit" class="burn-add-btn">+</button>
         </form>
         ${Object.keys(burnPresets).length > 0 ? `
@@ -161,16 +165,24 @@ const UI = {
         ` : ''}
         ${burns.length > 0 ? `
         <div class="burn-list">
-          ${burns.map(b => `
+          ${burns.map(b => {
+            const meta = [];
+            if (b.duration_mins) meta.push(`${Math.round(b.duration_mins)} min`);
+            if (b.steps > 0) meta.push(`${b.steps.toLocaleString()} steps`);
+            if (b.source === 'garmin') meta.push('Garmin');
+            return `
             <div class="burn-entry" data-id="${b.id}">
-              <span class="burn-name">${b.name}</span>
+              <div class="burn-entry-info">
+                <span class="burn-name">${b.name}</span>
+                ${meta.length > 0 ? `<span class="burn-meta">${meta.join(' · ')}</span>` : ''}
+              </div>
               <span class="burn-cal">${Math.round(b.calories)} kcal</span>
-              ${isToday ? `
+              ${isToday && b.source !== 'garmin' ? `
                 <button class="save-burn-preset" data-id="${b.id}" title="Save as shortcut">&#x1F4BE;</button>
                 <button class="delete-burn" data-id="${b.id}">&times;</button>
               ` : ''}
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
         ` : ''}
       </div>

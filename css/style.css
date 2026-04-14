@@ -685,13 +685,25 @@ body {
   margin-bottom: 16px;
 }
 
+.burn-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .burn-section h2 {
   font-size: 0.8rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  margin-bottom: 10px;
   font-weight: 500;
+}
+
+.burn-steps-total {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: #22d3ee;
 }
 
 .burn-note {
@@ -791,9 +803,22 @@ body {
   border-radius: 8px;
 }
 
-.burn-name {
+.burn-entry-info {
   flex: 1;
+  min-width: 0;
+}
+
+.burn-name {
+  display: block;
   font-size: 0.82rem;
+}
+
+.burn-meta {
+  display: block;
+  font-size: 0.68rem;
+  color: #555;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px;
 }
 
 .burn-cal {

@@ -410,7 +410,11 @@ const App = {
 
     try {
       const result = await estimateBurnWithClaude(text);
-      await this.addBurn(result.name, result.calories);
+      await this.addBurn(result.name, result.calories, {
+        activity_type: result.activity_type || "other",
+        duration_mins: result.duration_mins || null,
+        steps: result.steps || 0
+      });
     } catch (err) {
       console.error("Burn estimation failed:", err);
       alert("Estimation failed: " + err.message);
@@ -423,16 +427,24 @@ const App = {
   async addBurnFromPreset(key) {
     const preset = this.burnPresets[key];
     if (!preset) return;
-    await this.addBurn(preset.name, preset.calories);
+    await this.addBurn(preset.name, preset.calories, {
+      activity_type: preset.activity_type || "other",
+      duration_mins: preset.duration_mins || null,
+      steps: preset.steps || 0
+    });
   },
 
-  async addBurn(name, calories) {
+  async addBurn(name, calories, extra) {
     try {
       const saved = await addBurnEntry({
         date: todayString(),
         time: nowTimeString(),
         name,
-        calories
+        calories,
+        activity_type: extra?.activity_type || "other",
+        duration_mins: extra?.duration_mins || null,
+        steps: extra?.steps || 0,
+        source: "manual"
       });
       this.burns.push(saved);
       this.render();
@@ -457,7 +469,13 @@ const App = {
     const suggested = burn.name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
     const key = prompt("Shortcut name:", suggested);
     if (!key) return;
-    this.burnPresets[key.toLowerCase().trim()] = { name: burn.name, calories: burn.calories };
+    this.burnPresets[key.toLowerCase().trim()] = {
+      name: burn.name,
+      calories: burn.calories,
+      activity_type: burn.activity_type || "other",
+      duration_mins: burn.duration_mins || null,
+      steps: burn.steps || 0
+    };
     localStorage.setItem("burnlog_burn_presets", JSON.stringify(this.burnPresets));
     this.render();
   },

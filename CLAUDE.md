@@ -409,14 +409,46 @@ Users should be prompted to enter their Supabase credentials and Claude API key 
 - Settings page for API keys and target adjustments
 - Test: can install to phone home screen, works offline for presets
 
-### Session 7: Garmin integration
-- Connect to Garmin data for automatic activity/burn tracking (replaces manual burn entry)
-- Options to investigate: Garmin Connect API (OAuth), or third-party bridges (e.g., Strava API, Garmin → Google Fit → web, or services like Fitnessyncer/Runalyze that expose Garmin data via API)
-- Pull daily step count, active calories, and workouts
-- Auto-populate burn_entries from Garmin data (only count extra calories beyond the ~6k steps/day baseline baked into the calorie target)
-- Show Garmin activity summary on dashboard (steps, active minutes)
-- Fallback: manual entry still available if Garmin sync is unavailable
-- Test: Garmin workout/walk data appears automatically as burn entries
+### Session 7: Garmin integration (Phase 1 — done)
+- Enhanced burn_entries table with: activity_type, duration_mins, steps, source
+- Claude burn estimation now returns structured exercise data
+- UI shows duration, step count, and source per exercise entry
+- Step total displayed in exercise section header
+- source field is "manual" for user entries, "garmin" for future auto-sync
+
+### Session 7 Phase 2: GarminGo integration (future)
+- Add a `garmin_daily` table that GarminGo or a sync bridge can write to
+- App reads from this table to auto-populate exercise data
+- When Garmin data exists, use `active_calories` for burn calculation
+- Only count calories ABOVE the ~6k steps/day baseline baked into the calorie target
+
+```sql
+-- Phase 2: Garmin daily summary (run when ready to integrate)
+CREATE TABLE garmin_daily (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  date TEXT UNIQUE NOT NULL,
+  total_steps INTEGER DEFAULT 0,
+  active_calories REAL DEFAULT 0,
+  resting_hr INTEGER,
+  stress_avg INTEGER,
+  sleep_hours REAL,
+  body_battery_high INTEGER,
+  body_battery_low INTEGER,
+  synced_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_garmin_daily_date ON garmin_daily(date);
+
+ALTER TABLE garmin_daily ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on garmin_daily" ON garmin_daily FOR ALL USING (true) WITH CHECK (true);
+```
+
+### Session 7 Phase 3: Garmin Calendar feed (future)
+- User publishes their Garmin Connect training calendar (ICS feed)
+- Subscribe to it in Google Calendar
+- App could read planned workouts to show upcoming exercise on the dashboard
+- Consider Google Calendar API or direct ICS parsing
+- This was partially implemented in a previous Google Apps Script project
 
 ## Important Notes
 

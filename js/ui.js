@@ -211,6 +211,67 @@ const UI = {
     return '';
   },
 
+  // ── Settings Page ──
+
+  renderSettings() {
+    const savedConfig = JSON.parse(localStorage.getItem("burnlog_config") || "{}");
+
+    return `
+      <div class="settings-page">
+        <h2 class="settings-heading">API Credentials</h2>
+        <form id="settings-credentials">
+          <label>Supabase URL
+            <input type="url" id="settings-supa-url" value="${savedConfig.SUPABASE_URL || ''}" placeholder="https://xxxxx.supabase.co">
+          </label>
+          <label>Supabase Anon Key
+            <input type="text" id="settings-supa-key" value="${savedConfig.SUPABASE_ANON_KEY || ''}" placeholder="eyJhbGciOi...">
+          </label>
+          <label>Claude API Key
+            <input type="password" id="settings-claude-key" value="${savedConfig.CLAUDE_API_KEY || ''}" placeholder="sk-ant-...">
+          </label>
+          <button type="submit" class="settings-save-btn">Save Credentials</button>
+        </form>
+
+        <h2 class="settings-heading">Daily Targets</h2>
+        <form id="settings-targets">
+          ${Object.entries(NUTRIENT_TARGETS).map(([key, t]) => `
+            <div class="settings-target-row">
+              <label>${t.label}
+                <div class="target-input-group">
+                  <input type="number" class="target-input" data-metric="${key}" value="${t.goal}" step="any" min="0">
+                  <span class="target-unit">${t.unit}</span>
+                  <span class="target-dir ${t.direction}">${t.direction === 'max' ? 'max' : 'min'}</span>
+                </div>
+              </label>
+            </div>
+          `).join('')}
+          <button type="submit" class="settings-save-btn">Save Targets</button>
+        </form>
+
+        <h2 class="settings-heading">Custom Presets</h2>
+        <div class="settings-presets" id="settings-presets-list">
+          ${Object.entries(App.customPresets || {}).length === 0
+            ? '<p class="empty">No custom presets saved yet.</p>'
+            : Object.entries(App.customPresets).map(([key, p]) => `
+              <div class="settings-preset-row">
+                <span class="settings-preset-name">${p.emoji || ''} ${key}</span>
+                <span class="settings-preset-detail">${p.name} &mdash; ${p.calories} kcal</span>
+                <button class="delete-custom-preset" data-key="${key}" data-id="${p.id}">&times;</button>
+              </div>
+            `).join('')}
+        </div>
+
+        <h2 class="settings-heading">Data</h2>
+        <button id="export-csv-settings" class="settings-action-btn">Export All Data (CSV)</button>
+
+        <div class="settings-about">
+          <p>Burn Log v1.0</p>
+          <p class="settings-about-dim">PWA nutrition tracker</p>
+        </div>
+      </div>
+    `;
+  },
+
   // ── Full Page Render ──
 
   renderApp(state) {
@@ -227,6 +288,7 @@ const UI = {
           <div class="tab-bar">
             <button class="tab ${tab === 'log' ? 'active' : ''}" data-tab="log">Log</button>
             <button class="tab ${tab === 'trends' ? 'active' : ''}" data-tab="trends">Trends</button>
+            <button class="tab ${tab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
           </div>
         </header>
 
@@ -257,8 +319,10 @@ const UI = {
               ? `<p class="empty">${isToday ? 'No entries yet. Tap a chip or type a food above.' : 'No entries for this day.'}</p>`
               : entries.map(e => this.renderEntry(e, isToday)).join('')}
           </div>
-        ` : `
+        ` : tab === 'trends' ? `
           <div id="trends-container" class="trends-container"></div>
+        ` : `
+          ${this.renderSettings()}
         `}
       </div>
     `;

@@ -936,6 +936,196 @@ body {
   border-radius: 2px;
 }
 
+/* ── Settings Page ── */
+
+.settings-page {
+  padding-bottom: 40px;
+}
+
+.settings-heading {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+  margin: 24px 0 10px;
+}
+
+.settings-heading:first-child {
+  margin-top: 0;
+}
+
+.settings-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.settings-page input[type="url"],
+.settings-page input[type="text"],
+.settings-page input[type="password"] {
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.settings-page input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.settings-save-btn {
+  padding: 10px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.settings-save-btn:active {
+  opacity: 0.8;
+}
+
+.settings-target-row {
+  margin-bottom: 2px;
+}
+
+.target-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.target-input {
+  width: 90px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.target-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.target-unit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: #555;
+  min-width: 30px;
+}
+
+.target-dir {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.target-dir.max {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.target-dir.min {
+  background: rgba(163, 230, 53, 0.12);
+  color: #a3e635;
+}
+
+.settings-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.settings-preset-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.settings-preset-detail {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-custom-preset {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.delete-custom-preset:active {
+  color: var(--danger);
+}
+
+.settings-action-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.settings-action-btn:active {
+  border-color: var(--accent);
+}
+
+.settings-about {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.settings-about-dim {
+  color: #444;
+  font-size: 0.7rem;
+  margin-top: 4px;
+}
+
 /* ── Desktop tweaks ── */
 
 @media (min-width: 520px) {

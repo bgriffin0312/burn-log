@@ -200,6 +200,55 @@ const App = {
       this.render();
     });
 
+    // Settings: credentials form
+    document.getElementById("settings-credentials")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveConfig(
+        document.getElementById("settings-supa-url").value.trim(),
+        document.getElementById("settings-supa-key").value.trim(),
+        document.getElementById("settings-claude-key").value.trim()
+      );
+      initSupabase();
+      alert("Credentials saved.");
+    });
+
+    // Settings: targets form
+    document.getElementById("settings-targets")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const inputs = document.querySelectorAll(".target-input");
+      for (const input of inputs) {
+        const metric = input.dataset.metric;
+        const value = parseFloat(input.value);
+        if (!isNaN(value) && value >= 0) {
+          NUTRIENT_TARGETS[metric].goal = value;
+          try { await updateDailyTarget(metric, value); } catch (err) {
+            console.warn("Failed to sync target to DB:", metric, err);
+          }
+        }
+      }
+      alert("Targets saved.");
+      this.render();
+    });
+
+    // Settings: delete custom preset
+    document.querySelectorAll(".delete-custom-preset").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const key = btn.dataset.key;
+        const id = btn.dataset.id;
+        if (!confirm(`Delete preset "${key}"?`)) return;
+        try {
+          await deleteCustomPreset(id);
+          delete this.customPresets[key];
+          this.render();
+        } catch (err) {
+          console.error("Failed to delete preset:", err);
+        }
+      });
+    });
+
+    // Settings: export CSV
+    document.getElementById("export-csv-settings")?.addEventListener("click", () => Charts.exportCSV());
+
     // Swipe left/right for date navigation
     let touchStartX = 0;
     const shell = document.querySelector(".app-shell");

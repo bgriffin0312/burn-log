@@ -24,7 +24,7 @@ const Charts = {
       // Build 14 days of data
       const labels = [];
       const data = {
-        calories: [], net_calories: [], fiber: [], saturated_fat: [],
+        calories: [], net_calories: [], burned: [], fiber: [], saturated_fat: [],
         protein: [], sodium: [], added_sugar: [], vitamin_d: []
       };
 
@@ -39,6 +39,7 @@ const Charts = {
         labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
         data.calories.push(totals.calories);
         data.net_calories.push(totals.calories - burned);
+        data.burned.push(burned);
         data.fiber.push(totals.fiber);
         data.saturated_fat.push(totals.saturated_fat);
         data.protein.push(totals.protein);
@@ -52,6 +53,7 @@ const Charts = {
       container.innerHTML = `
         <div class="trends-charts">
           <div class="chart-wrap"><canvas id="chart-calories"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-burned"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-protein"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-fiber"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-satfat"></canvas></div>
@@ -93,7 +95,12 @@ const Charts = {
       };
 
       this.createChart("chart-calories", "Net Calories", labels, data.net_calories,
-        "#a3e635", NUTRIENT_TARGETS.calories.goal, chartDefaults);
+        "#a3e635", [
+          { value: NUTRIENT_TARGETS.calories.goal, label: "Goal: " + NUTRIENT_TARGETS.calories.goal, color: "#a3e63566" },
+          { value: 1900, label: "Breakeven: 1900", color: "#ef444466" }
+        ], chartDefaults);
+      this.createChart("chart-burned", "Extra Calories Burned", labels, data.burned,
+        "#f97316", [], chartDefaults);
       this.createChart("chart-protein", "Protein (g)", labels, data.protein,
         "#34d399", NUTRIENT_TARGETS.protein.goal, chartDefaults);
       this.createChart("chart-fiber", "Fiber (g)", labels, data.fiber,
@@ -116,9 +123,34 @@ const Charts = {
     }
   },
 
-  createChart(canvasId, title, labels, data, color, goalValue, defaults) {
+  createChart(canvasId, title, labels, data, color, goalLines, defaults) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
+
+    // Normalize goalLines: accept a single number or an array of {value, label, color}
+    const lines = Array.isArray(goalLines)
+      ? goalLines
+      : [{ value: goalLines, label: "Goal: " + goalLines, color: "#ffffff33" }];
+
+    const annotations = {};
+    lines.forEach((line, i) => {
+      annotations["line" + i] = {
+        type: 'line',
+        yMin: line.value,
+        yMax: line.value,
+        borderColor: line.color || '#ffffff33',
+        borderWidth: 1,
+        borderDash: [4, 4],
+        label: {
+          display: true,
+          content: line.label,
+          position: 'end',
+          backgroundColor: 'transparent',
+          color: '#666',
+          font: { size: 9, family: "'JetBrains Mono', monospace" }
+        }
+      };
+    });
 
     const chart = new Chart(ctx, {
       type: "bar",
@@ -147,24 +179,7 @@ const Charts = {
             padding: { bottom: 8 }
           },
           annotation: {
-            annotations: {
-              goalLine: {
-                type: 'line',
-                yMin: goalValue,
-                yMax: goalValue,
-                borderColor: '#ffffff33',
-                borderWidth: 1,
-                borderDash: [4, 4],
-                label: {
-                  display: true,
-                  content: `Goal: ${goalValue}`,
-                  position: 'end',
-                  backgroundColor: 'transparent',
-                  color: '#555',
-                  font: { size: 9, family: "'JetBrains Mono', monospace" }
-                }
-              }
-            }
+            annotations
           }
         }
       }

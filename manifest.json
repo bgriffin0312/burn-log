@@ -1,0 +1,13 @@
+{
+  "name": "Burn Log",
+  "short_name": "Burn Log",
+  "description": "Nutrition tracking PWA",
+  "start_url": "/burn-log/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

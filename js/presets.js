@@ -95,5 +95,11 @@ const DEFAULT_PRESETS = {
     portion: "1 serving (1/4)",
     calories: 500, fiber: 2, saturated_fat: 12, sodium: 500,
     protein: 36, added_sugar: 0, vitamin_d: 13, emoji: "\u{1F357}"
+  },
+  "baked ziti": {
+    name: "ATK Skillet Baked Ziti",
+    portion: "1 cup",
+    calories: 250, fiber: 1.5, saturated_fat: 3, sodium: 190,
+    protein: 10, added_sugar: 0, vitamin_d: 0.5, emoji: "\u{1F35D}"
   }
 };

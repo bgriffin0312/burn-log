@@ -1,5 +1,5 @@
 // Burn Log Service Worker — offline caching
-const CACHE_NAME = "burnlog-v2";
+const CACHE_NAME = "burnlog-v3";
 
 const APP_SHELL = [
   "./",

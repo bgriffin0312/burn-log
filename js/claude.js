@@ -2,7 +2,7 @@
 
 const CLAUDE_SYSTEM_PROMPT = `You are a concise nutrition estimator. Respond ONLY with valid JSON, no markdown fences.
 Format: { "items": [{ "name": "Food name", "calories": 350, "portion": "1 cup", "fiber_g": 5, "saturated_fat_g": 2, "sodium_mg": 400, "protein_g": 15, "added_sugar_g": 0, "vitamin_d_iu": 0 }], "total_calories": 350, "notes": "brief note if needed" }
-Be realistic with portions. Estimate all nutrient fields as accurately as possible.
+Be realistic with portions. When the user specifies a quantity (e.g. "4 pretzel crisps", "3 chips"), calculate nutrition for EXACTLY that amount — do NOT round up to a standard serving size. Scale all nutrients proportionally from the per-serving data. Estimate all nutrient fields as accurately as possible.
 - fiber_g: total dietary fiber in grams
 - saturated_fat_g: saturated fat only (not total fat) in grams
 - sodium_mg: sodium in milligrams

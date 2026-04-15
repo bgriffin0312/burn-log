@@ -1,15 +1,18 @@
 """Garmin Connect -> Supabase daily sync.
 
-Fetches today's daily summary from Garmin Connect and upserts it into the
-garmin_daily table in Supabase. Designed to run as a scheduled GitHub Action.
+Fetches the last N days of daily summaries from Garmin Connect and upserts
+them into the garmin_daily table in Supabase. Syncing multiple days makes
+the job self-healing — if a run is missed, the next one catches up.
 
 Required env vars:
   GARMIN_EMAIL, GARMIN_PASSWORD, SUPABASE_URL, SUPABASE_KEY
+Optional:
+  SYNC_DAYS — number of days to sync (default: 3)
 """
 
 import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectTooManyRequestsError
 from supabase import create_client
@@ -23,11 +26,8 @@ def get_env(name):
     return value
 
 
-def fetch_garmin_data(email, password, target_date):
-    """Log into Garmin Connect and fetch daily stats."""
-    client = Garmin(email, password)
-    client.login()
-
+def fetch_garmin_data(client, target_date):
+    """Fetch daily stats for a single date from an authenticated Garmin client."""
     date_str = target_date.isoformat()
     stats = client.get_stats(date_str)
 
@@ -79,34 +79,49 @@ def main():
     password = get_env("GARMIN_PASSWORD")
     supa_url = get_env("SUPABASE_URL")
     supa_key = get_env("SUPABASE_KEY")
+    sync_days = int(os.environ.get("SYNC_DAYS", "3"))
 
-    target_date = date.today()
-    print(f"Syncing Garmin data for {target_date.isoformat()}...")
-
+    print(f"Logging into Garmin Connect...")
     try:
-        data = fetch_garmin_data(email, password, target_date)
+        client = Garmin(email, password)
+        client.login()
     except GarminConnectAuthenticationError as e:
         print(f"Auth failed: {e}")
         sys.exit(1)
-    except GarminConnectTooManyRequestsError:
-        print("Rate limited by Garmin. Try again later.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Garmin fetch failed: {e}")
-        sys.exit(1)
 
-    print(f"  Steps: {data['total_steps']}")
-    print(f"  Active cal: {data['active_calories']}")
-    print(f"  Resting HR: {data['resting_hr']}")
-    print(f"  Sleep: {data['sleep_hours']}h")
-    print(f"  Body Battery: {data['body_battery_low']}-{data['body_battery_high']}")
-    print(f"  Stress avg: {data['stress_avg']}")
+    today = date.today()
+    failed = 0
 
-    try:
-        upsert_to_supabase(supa_url, supa_key, data)
-        print("Upserted to Supabase successfully.")
-    except Exception as e:
-        print(f"Supabase upsert failed: {e}")
+    for i in range(sync_days):
+        target_date = today - timedelta(days=i)
+        print(f"\n--- {target_date.isoformat()} ---")
+
+        try:
+            data = fetch_garmin_data(client, target_date)
+        except GarminConnectTooManyRequestsError:
+            print("Rate limited by Garmin. Stopping.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"  Fetch failed: {e}")
+            failed += 1
+            continue
+
+        print(f"  Steps: {data['total_steps']}")
+        print(f"  Active cal: {data['active_calories']}")
+        print(f"  Resting HR: {data['resting_hr']}")
+        print(f"  Sleep: {data['sleep_hours']}h")
+        print(f"  Body Battery: {data['body_battery_low']}-{data['body_battery_high']}")
+        print(f"  Stress avg: {data['stress_avg']}")
+
+        try:
+            upsert_to_supabase(supa_url, supa_key, data)
+            print("  Upserted to Supabase.")
+        except Exception as e:
+            print(f"  Supabase upsert failed: {e}")
+            failed += 1
+
+    print(f"\nDone. Synced {sync_days - failed}/{sync_days} days.")
+    if failed:
         sys.exit(1)
 
 

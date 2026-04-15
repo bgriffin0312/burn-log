@@ -3,7 +3,12 @@ name: Garmin Sync
 on:
   schedule:
     - cron: '0 */4 * * *'  # Every 4 hours
-  workflow_dispatch:         # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      sync_days:
+        description: 'Number of days to sync (default 3)'
+        required: false
+        default: '3'
 
 jobs:
   sync:
@@ -24,4 +29,6 @@ jobs:
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SYNC_DAYS: ${{ inputs.sync_days || '3' }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         run: python scripts/garmin_sync.py

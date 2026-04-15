@@ -610,10 +610,14 @@ const App = {
           missingDays.push(d);
         }
 
+        const calorieBudget = NUTRIENT_TARGETS.calories.goal + burned;
         days[d] = {
           entries: dayEntries.length,
           ...totals,
+          calories_consumed: totals.calories,
           extra_burned: burned,
+          calorie_budget: calorieBudget,
+          surplus_deficit: totals.calories - calorieBudget,
           net_calories: totals.calories - burned
         };
       }

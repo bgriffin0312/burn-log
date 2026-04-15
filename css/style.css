@@ -921,14 +921,101 @@ body {
   margin-top: 1px;
 }
 
-.garmin-extras {
-  font-size: 0.65rem;
+/* ── Garmin Sleep Section ── */
+
+.garmin-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1a2a3a;
+}
+
+.garmin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.garmin-section-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #555;
+}
+
+.garmin-section-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text);
+}
+
+.sleep-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.sleep-segment {
+  height: 100%;
+  min-width: 2px;
+}
+
+.sleep-segment.sleep-deep { background: #6366f1; }
+.sleep-segment.sleep-light { background: #38bdf8; }
+.sleep-segment.sleep-rem { background: #a78bfa; }
+.sleep-segment.sleep-awake { background: #f59e0b; }
+
+.sleep-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sleep-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.58rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #555;
+}
+
+.sleep-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.sleep-dot.sleep-deep { background: #6366f1; }
+.sleep-dot.sleep-light { background: #38bdf8; }
+.sleep-dot.sleep-rem { background: #a78bfa; }
+.sleep-dot.sleep-awake { background: #f59e0b; }
+
+/* ── Garmin Recovery Row ── */
+
+.garmin-recovery-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1a2a3a;
+}
+
+.garmin-recovery-stat {
+  font-size: 0.6rem;
   font-family: 'JetBrains Mono', monospace;
   color: #555;
   text-align: center;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #1a2a3a;
+}
+
+.garmin-recovery-value {
+  color: var(--text);
+  font-weight: 500;
+  margin-right: 2px;
 }
 
 /* ── Garmin Settings Form ── */

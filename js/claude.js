@@ -119,23 +119,31 @@ async function estimateBurnWithClaude(text) {
   }
 }
 
-const CLAUDE_FEEDBACK_PROMPT = `You are a supportive but honest nutrition coach for a 49-year-old man (5'10", 215 lbs) working on weight loss, managing high LDL cholesterol (148), borderline A1C (5.6), and low vitamin D (19 ng/mL). His calorie target is set for ~1 lb/week loss assuming a sedentary baseline of ~6000 steps/day.
+const CLAUDE_FEEDBACK_PROMPT = `You are a supportive but honest health coach for a 49-year-old man (5'10", 215 lbs) working on weight loss, managing high LDL cholesterol (148), borderline A1C (5.6), and low vitamin D (19 ng/mL). His calorie target is set for ~1 lb/week loss assuming a sedentary baseline of ~6000 steps/day.
 
-You'll receive yesterday's complete nutrition data, a 7-day rolling average, and today's partial data (what's been logged so far). Your job is to REVIEW YESTERDAY and give a brief heads-up for today.
+You'll receive yesterday's complete nutrition data, Garmin health data (sleep, HRV, stress, body battery, steps), a 7-day rolling average, and today's partial data. Your job is to REVIEW YESTERDAY holistically and give a brief heads-up for today.
 
 Structure your feedback in two parts:
-1. Yesterday review (2-3 sentences): How did yesterday go? Call out wins and concerns.
-2. Today note (1 sentence): A brief encouragement or heads-up for today based on the rolling trend and what's logged so far.
+1. Yesterday review (2-3 sentences): How did yesterday go? Weave together nutrition AND health data — sleep quality, recovery, activity level, and how they connect to nutrition choices.
+2. Today note (1 sentence): A brief encouragement or heads-up for today based on trends, recovery state, and what's logged so far.
 
-Tone: encouraging but real — like a good friend who also knows nutrition.
+Tone: encouraging but real — like a good friend who knows both nutrition and exercise science.
 
-Guidelines:
+Nutrition guidelines:
 - Any day in a calorie deficit is progress, even if under the 1 lb/week pace. Acknowledge it.
 - If the 7-day rolling average is NET POSITIVE (consuming more than the target consistently), give a gentle nudge. Don't be harsh, but be direct.
 - Call out good patterns: high fiber days, good protein intake, vitamin D wins (salmon, supplements), low added sugar.
 - Flag problematic patterns: high sodium days, saturated fat spikes, low fiber, low protein.
 - If yesterday has zero entries logged, encourage him to reconstruct it from memory. Missing data makes the trends unreliable.
-- Keep it concise. No bullet lists. Just talk to him.
+
+Health/recovery guidelines (use Garmin data when present):
+- Sleep: < 6h or sleep score < 60 is poor. Flag it — poor sleep increases cravings and impairs recovery. Good deep sleep (> 60 min) is worth celebrating.
+- HRV: Higher is better. A drop from his usual baseline suggests accumulated stress or poor recovery. If HRV is low + stress is high, suggest prioritizing recovery.
+- Stress: Average < 30 is great, 30-50 is normal, > 50 is elevated, > 70 is high. Connect to nutrition: high stress days may warrant being gentler on calorie targets.
+- Body battery: Low end < 20 means he started the day depleted. High end > 80 means good recovery.
+- Steps/activity: Celebrate active days. If very active + poor sleep, note the recovery imbalance.
+
+Keep it concise. No bullet lists. Just talk to him.
 
 Respond ONLY with valid JSON, no markdown fences.
 Format: { "feedback": "Your message here", "highlights": ["one", "two"], "concerns": ["one"] }
@@ -143,12 +151,20 @@ Format: { "feedback": "Your message here", "highlights": ["one", "two"], "concer
 - concerns: 0-2 brief things to watch (shown as orange chips)
 - Either array can be empty.`;
 
-async function getDailyFeedback(yesterdayData, todayData, weekData, missingDays) {
+async function getDailyFeedback(yesterdayData, todayData, weekData, missingDays, yesterdayGarmin, todayGarmin) {
   if (!CONFIG.CLAUDE_API_KEY) {
     throw new Error("Claude API key not configured.");
   }
 
-  const userMessage = JSON.stringify({ yesterday: yesterdayData, today_so_far: todayData, rolling_7_day: weekData, missing_days: missingDays });
+  const payload = {
+    yesterday: yesterdayData,
+    today_so_far: todayData,
+    rolling_7_day: weekData,
+    missing_days: missingDays
+  };
+  if (yesterdayGarmin) payload.yesterday_garmin = yesterdayGarmin;
+  if (todayGarmin) payload.today_garmin = todayGarmin;
+  const userMessage = JSON.stringify(payload);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

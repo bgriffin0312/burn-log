@@ -143,18 +143,24 @@ const UI = {
     if (!garminData) return '';
     const steps = garminData.total_steps || 0;
     const activeCal = garminData.active_calories || 0;
-    // Garmin replaces the baseline estimate with exact tracking.
-    // steps > 0 means Garmin is active — use full active_calories.
-    // steps == 0 means watch not worn — subtract baseline.
     const extraCal = steps > 0
       ? activeCal
       : Math.max(0, activeCal - GARMIN_BASELINE_ACTIVE_CAL);
 
-    const extras = [];
-    if (garminData.resting_hr) extras.push(`${garminData.resting_hr} bpm rest`);
-    if (garminData.sleep_hours) extras.push(`${garminData.sleep_hours}h sleep`);
-    if (garminData.body_battery_high != null && garminData.body_battery_low != null)
-      extras.push(`BB ${garminData.body_battery_low}–${garminData.body_battery_high}`);
+    // Sleep stages bar
+    const deep = garminData.deep_sleep_mins || 0;
+    const light = garminData.light_sleep_mins || 0;
+    const rem = garminData.rem_sleep_mins || 0;
+    const awake = garminData.awake_mins || 0;
+    const sleepTotal = deep + light + rem + awake;
+    const hasSleepStages = sleepTotal > 0;
+
+    // Stress color: green < 30, yellow 30-50, orange 50-70, red 70+
+    const stress = garminData.stress_avg;
+    let stressColor = '#a3e635';
+    if (stress >= 70) stressColor = '#ef4444';
+    else if (stress >= 50) stressColor = '#f97316';
+    else if (stress >= 30) stressColor = '#fbbf24';
 
     return `
       <div class="garmin-card">
@@ -162,6 +168,7 @@ const UI = {
           <span class="garmin-badge">Garmin</span>
           <span class="garmin-sync-time">${garminData.synced_at ? new Date(garminData.synced_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
         </div>
+
         <div class="garmin-stats">
           <div class="garmin-stat">
             <span class="garmin-stat-value">${steps.toLocaleString()}</span>
@@ -176,7 +183,36 @@ const UI = {
             <span class="garmin-stat-label">extra burn</span>
           </div>
         </div>
-        ${extras.length > 0 ? `<div class="garmin-extras">${extras.join(' · ')}</div>` : ''}
+
+        ${garminData.sleep_hours ? `
+        <div class="garmin-section">
+          <div class="garmin-section-header">
+            <span class="garmin-section-label">Sleep</span>
+            <span class="garmin-section-value">${garminData.sleep_hours}h${garminData.sleep_score ? ` · score ${garminData.sleep_score}` : ''}</span>
+          </div>
+          ${hasSleepStages ? `
+          <div class="sleep-bar">
+            <div class="sleep-segment sleep-deep" style="width:${(deep / sleepTotal * 100).toFixed(1)}%" title="Deep: ${deep}m"></div>
+            <div class="sleep-segment sleep-light" style="width:${(light / sleepTotal * 100).toFixed(1)}%" title="Light: ${light}m"></div>
+            <div class="sleep-segment sleep-rem" style="width:${(rem / sleepTotal * 100).toFixed(1)}%" title="REM: ${rem}m"></div>
+            <div class="sleep-segment sleep-awake" style="width:${(awake / sleepTotal * 100).toFixed(1)}%" title="Awake: ${awake}m"></div>
+          </div>
+          <div class="sleep-legend">
+            <span class="sleep-legend-item"><span class="sleep-dot sleep-deep"></span>${deep}m deep</span>
+            <span class="sleep-legend-item"><span class="sleep-dot sleep-light"></span>${light}m light</span>
+            <span class="sleep-legend-item"><span class="sleep-dot sleep-rem"></span>${rem}m REM</span>
+            <span class="sleep-legend-item"><span class="sleep-dot sleep-awake"></span>${awake}m awake</span>
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
+
+        <div class="garmin-recovery-row">
+          ${garminData.avg_hrv ? `<span class="garmin-recovery-stat"><span class="garmin-recovery-value">${Math.round(garminData.avg_hrv)}</span> HRV</span>` : ''}
+          ${garminData.resting_hr ? `<span class="garmin-recovery-stat"><span class="garmin-recovery-value">${garminData.resting_hr}</span> rHR</span>` : ''}
+          ${stress ? `<span class="garmin-recovery-stat"><span class="garmin-recovery-value" style="color:${stressColor}">${stress}</span> stress</span>` : ''}
+          ${garminData.body_battery_high != null && garminData.body_battery_low != null ? `<span class="garmin-recovery-stat"><span class="garmin-recovery-value">${garminData.body_battery_low}–${garminData.body_battery_high}</span> BB</span>` : ''}
+        </div>
       </div>
     `;
   },
@@ -303,6 +339,14 @@ const UI = {
             </label>
             <label>Sleep Hours
               <input type="number" id="garmin-sleep" value="${(App.garminData?.sleep_hours) || ''}" step="0.1" min="0" max="24" placeholder="e.g. 7.5">
+            </label>
+          </div>
+          <div class="garmin-form-row">
+            <label>Sleep Score
+              <input type="number" id="garmin-sleep-score" value="${(App.garminData?.sleep_score) || ''}" min="0" max="100" placeholder="0–100">
+            </label>
+            <label>HRV (avg)
+              <input type="number" id="garmin-hrv" value="${(App.garminData?.avg_hrv) || ''}" step="any" min="0" placeholder="e.g. 42">
             </label>
           </div>
           <div class="garmin-form-row">

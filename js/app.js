@@ -258,6 +258,8 @@ const App = {
       const activeCal = parseFloat(document.getElementById("garmin-active-cal").value) || 0;
       const restingHr = parseInt(document.getElementById("garmin-resting-hr").value) || null;
       const sleepHours = parseFloat(document.getElementById("garmin-sleep").value) || null;
+      const sleepScore = parseInt(document.getElementById("garmin-sleep-score").value) || null;
+      const avgHrv = parseFloat(document.getElementById("garmin-hrv").value) || null;
       const bbHigh = parseInt(document.getElementById("garmin-bb-high").value) || null;
       const bbLow = parseInt(document.getElementById("garmin-bb-low").value) || null;
 
@@ -269,6 +271,8 @@ const App = {
           resting_hr: restingHr,
           stress_avg: null,
           sleep_hours: sleepHours,
+          sleep_score: sleepScore,
+          avg_hrv: avgHrv,
           body_battery_high: bbHigh,
           body_battery_low: bbLow
         });
@@ -585,9 +589,10 @@ const App = {
       const today = todayString();
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-      const [allEntries, allBurns] = await Promise.all([
+      const [allEntries, allBurns, garminDays] = await Promise.all([
         getEntriesForDateRange(sevenDaysAgo, today),
-        getBurnsForDateRange(sevenDaysAgo, today)
+        getBurnsForDateRange(sevenDaysAgo, today),
+        getGarminDailyRange(sevenDaysAgo, today).catch(() => [])
       ]);
 
       // Build per-day summaries (only flag missing days from start date onward)
@@ -627,8 +632,10 @@ const App = {
 
       const yesterdayData = days[yesterday] || { entries: 0 };
       const todayData = days[today] || { entries: 0 };
+      const yesterdayGarmin = garminDays.find(g => g.date === yesterday) || null;
+      const todayGarmin = garminDays.find(g => g.date === today) || null;
       const weekData = { daily_averages: avg, target_calories: NUTRIENT_TARGETS.calories.goal, days };
-      const result = await getDailyFeedback(yesterdayData, todayData, weekData, missingDays);
+      const result = await getDailyFeedback(yesterdayData, todayData, weekData, missingDays, yesterdayGarmin, todayGarmin);
 
       this.feedback = result;
       localStorage.setItem("burnlog_last_feedback_date", today);

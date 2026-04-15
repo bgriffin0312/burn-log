@@ -448,10 +448,24 @@ CREATE POLICY "Allow all on garmin_daily" ON garmin_daily FOR ALL USING (true) W
 
 ### Session 7 Phase 2b: Garmin auto-sync via GitHub Action (done)
 - `scripts/garmin_sync.py` — Python script using `garminconnect` + `supabase-py`
-- `.github/workflows/garmin-sync.yml` — Runs every 4 hours + manual dispatch
-- Fetches: steps, active calories, resting HR, stress avg, sleep hours, body battery
+- `.github/workflows/garmin-sync.yml` — Runs every 4 hours + manual dispatch, syncs last 3 days
+- Fetches: steps, active calories, resting HR, stress avg, sleep (hours + score + stages), HRV, body battery
 - Upserts to `garmin_daily` table in Supabase
 - **GitHub Secrets required**: `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `SUPABASE_URL`, `SUPABASE_KEY`
+- Garmin card shows: steps, active/extra cal, sleep stages bar, sleep score, HRV, resting HR, stress (color-coded), body battery
+- Sleep + HRV trend charts in Trends tab
+- Daily review prompt includes Garmin health data (sleep quality, HRV, stress, body battery) alongside nutrition
+
+**Additional SQL to add health columns** (run after initial garmin_daily table exists):
+```sql
+ALTER TABLE garmin_daily
+  ADD COLUMN IF NOT EXISTS sleep_score INTEGER,
+  ADD COLUMN IF NOT EXISTS deep_sleep_mins INTEGER,
+  ADD COLUMN IF NOT EXISTS light_sleep_mins INTEGER,
+  ADD COLUMN IF NOT EXISTS rem_sleep_mins INTEGER,
+  ADD COLUMN IF NOT EXISTS awake_mins INTEGER,
+  ADD COLUMN IF NOT EXISTS avg_hrv REAL;
+```
 
 ### Session 7 Phase 3: Garmin Calendar feed (future)
 - User publishes their Garmin Connect training calendar (ICS feed)

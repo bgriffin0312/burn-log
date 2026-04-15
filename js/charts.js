@@ -26,6 +26,7 @@ const Charts = {
       const labels = [];
       const data = {
         calories: [], net_calories: [], burned: [], steps: [],
+        sleep_hours: [], avg_hrv: [],
         fiber: [], saturated_fat: [],
         protein: [], sodium: [], added_sugar: [], vitamin_d: []
       };
@@ -46,6 +47,8 @@ const Charts = {
         data.net_calories.push(totals.calories - burned);
         data.burned.push(burned);
         data.steps.push(steps);
+        data.sleep_hours.push(garmin ? (garmin.sleep_hours || 0) : 0);
+        data.avg_hrv.push(garmin ? (garmin.avg_hrv || 0) : 0);
         data.fiber.push(totals.fiber);
         data.saturated_fat.push(totals.saturated_fat);
         data.protein.push(totals.protein);
@@ -61,6 +64,8 @@ const Charts = {
           <div class="chart-wrap"><canvas id="chart-calories"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-burned"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-steps"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-sleep"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-protein"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-fiber"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-satfat"></canvas></div>
@@ -110,6 +115,10 @@ const Charts = {
         "#f97316", [], chartDefaults);
       this.createChart("chart-steps", "Steps", labels, data.steps,
         "#38bdf8", [{ value: GARMIN_BASELINE_STEPS, label: "Baseline: " + GARMIN_BASELINE_STEPS, color: "#38bdf866" }], chartDefaults);
+      this.createChart("chart-sleep", "Sleep (hours)", labels, data.sleep_hours,
+        "#6366f1", [{ value: 7, label: "Goal: 7h", color: "#6366f166" }], chartDefaults);
+      this.createChart("chart-hrv", "HRV (nightly avg)", labels, data.avg_hrv,
+        "#a78bfa", [], chartDefaults);
       this.createChart("chart-protein", "Protein (g)", labels, data.protein,
         "#34d399", NUTRIENT_TARGETS.protein.goal, chartDefaults);
       this.createChart("chart-fiber", "Fiber (g)", labels, data.fiber,

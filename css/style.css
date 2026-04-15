@@ -857,6 +857,114 @@ body {
   color: var(--danger);
 }
 
+/* ── Garmin Card ── */
+
+.garmin-card {
+  background: linear-gradient(135deg, #0a1a2a 0%, #0f1520 100%);
+  border: 1px solid #1a3050;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.garmin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.garmin-badge {
+  font-size: 0.62rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.garmin-sync-time {
+  font-size: 0.62rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #555;
+}
+
+.garmin-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.garmin-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.garmin-stat-value {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.garmin-stat-extra .garmin-stat-value {
+  color: #f97316;
+}
+
+.garmin-stat-label {
+  display: block;
+  font-size: 0.6rem;
+  color: #555;
+  margin-top: 1px;
+}
+
+.garmin-extras {
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #555;
+  text-align: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #1a2a3a;
+}
+
+/* ── Garmin Settings Form ── */
+
+.garmin-form .garmin-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.garmin-form .garmin-form-row label {
+  flex: 1;
+}
+
+.garmin-form input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.garmin-form input[type="number"]:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.garmin-last-sync {
+  font-size: 0.68rem;
+  color: #555;
+  text-align: center;
+  margin-top: 6px;
+}
+
 /* ── Calorie Goal Note ── */
 
 .calorie-goal-note {

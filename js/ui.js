@@ -139,7 +139,49 @@ const UI = {
 
   // ── Burn Section ──
 
-  renderBurnSection(burns, burnPresets, isToday) {
+  renderGarminCard(garminData) {
+    if (!garminData) return '';
+    const steps = garminData.total_steps || 0;
+    const activeCal = garminData.active_calories || 0;
+    // Garmin replaces the baseline estimate with exact tracking.
+    // steps > 0 means Garmin is active — use full active_calories.
+    // steps == 0 means watch not worn — subtract baseline.
+    const extraCal = steps > 0
+      ? activeCal
+      : Math.max(0, activeCal - GARMIN_BASELINE_ACTIVE_CAL);
+
+    const extras = [];
+    if (garminData.resting_hr) extras.push(`${garminData.resting_hr} bpm rest`);
+    if (garminData.sleep_hours) extras.push(`${garminData.sleep_hours}h sleep`);
+    if (garminData.body_battery_high != null && garminData.body_battery_low != null)
+      extras.push(`BB ${garminData.body_battery_low}–${garminData.body_battery_high}`);
+
+    return `
+      <div class="garmin-card">
+        <div class="garmin-card-header">
+          <span class="garmin-badge">Garmin</span>
+          <span class="garmin-sync-time">${garminData.synced_at ? new Date(garminData.synced_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+        </div>
+        <div class="garmin-stats">
+          <div class="garmin-stat">
+            <span class="garmin-stat-value">${steps.toLocaleString()}</span>
+            <span class="garmin-stat-label">steps</span>
+          </div>
+          <div class="garmin-stat">
+            <span class="garmin-stat-value">${Math.round(activeCal)}</span>
+            <span class="garmin-stat-label">active kcal</span>
+          </div>
+          <div class="garmin-stat garmin-stat-extra">
+            <span class="garmin-stat-value">${Math.round(extraCal)}</span>
+            <span class="garmin-stat-label">extra burn</span>
+          </div>
+        </div>
+        ${extras.length > 0 ? `<div class="garmin-extras">${extras.join(' · ')}</div>` : ''}
+      </div>
+    `;
+  },
+
+  renderBurnSection(burns, burnPresets, isToday, garminData) {
     const totalBurned = burns.reduce((sum, b) => sum + (b.calories || 0), 0);
     const totalSteps = burns.reduce((sum, b) => sum + (b.steps || 0), 0);
 
@@ -149,7 +191,8 @@ const UI = {
           <h2>Exercise${totalBurned > 0 ? ` (${Math.round(totalBurned)} kcal)` : ''}</h2>
           ${totalSteps > 0 ? `<span class="burn-steps-total">${totalSteps.toLocaleString()} steps</span>` : ''}
         </div>
-        <p class="burn-note">Beyond your ~6k steps baseline</p>
+        <p class="burn-note">Active calories above resting</p>
+        ${this.renderGarminCard(garminData)}
         ${isToday ? `
         <form id="burn-form">
           <input type="text" id="burn-input" placeholder="e.g. ran 3 miles, 30 min strength..." autocomplete="off">
@@ -244,6 +287,36 @@ const UI = {
           <button type="submit" class="settings-save-btn">Save Credentials</button>
         </form>
 
+        <h2 class="settings-heading">Garmin Daily Data</h2>
+        <form id="garmin-form" class="garmin-form">
+          <div class="garmin-form-row">
+            <label>Steps
+              <input type="number" id="garmin-steps" value="${(App.garminData?.total_steps) || ''}" min="0" placeholder="e.g. 10000">
+            </label>
+            <label>Active Calories
+              <input type="number" id="garmin-active-cal" value="${(App.garminData?.active_calories) || ''}" step="any" min="0" placeholder="e.g. 450">
+            </label>
+          </div>
+          <div class="garmin-form-row">
+            <label>Resting HR
+              <input type="number" id="garmin-resting-hr" value="${(App.garminData?.resting_hr) || ''}" min="30" max="120" placeholder="bpm">
+            </label>
+            <label>Sleep Hours
+              <input type="number" id="garmin-sleep" value="${(App.garminData?.sleep_hours) || ''}" step="0.1" min="0" max="24" placeholder="e.g. 7.5">
+            </label>
+          </div>
+          <div class="garmin-form-row">
+            <label>Body Battery High
+              <input type="number" id="garmin-bb-high" value="${(App.garminData?.body_battery_high) || ''}" min="0" max="100" placeholder="0–100">
+            </label>
+            <label>Body Battery Low
+              <input type="number" id="garmin-bb-low" value="${(App.garminData?.body_battery_low) || ''}" min="0" max="100" placeholder="0–100">
+            </label>
+          </div>
+          <button type="submit" class="settings-save-btn">Save Today's Garmin Data</button>
+          ${App.garminData?.synced_at ? `<p class="garmin-last-sync">Last synced: ${new Date(App.garminData.synced_at).toLocaleString()}</p>` : ''}
+        </form>
+
         <h2 class="settings-heading">Daily Targets</h2>
         <form id="settings-targets">
           ${Object.entries(NUTRIENT_TARGETS).map(([key, t]) => `
@@ -287,7 +360,7 @@ const UI = {
   // ── Full Page Render ──
 
   renderApp(state) {
-    const { currentDate, entries, burns, burnPresets, customPresets, feedback, feedbackLoading, activeTab } = state;
+    const { currentDate, entries, burns, garminData, burnPresets, customPresets, feedback, feedbackLoading, activeTab } = state;
     const totals = calcTotals(entries);
     const totalBurned = (burns || []).reduce((sum, b) => sum + (b.calories || 0), 0);
     const isToday = currentDate === todayString();
@@ -323,7 +396,7 @@ const UI = {
 
           ${isToday ? this.renderInputArea(customPresets) : ''}
 
-          ${this.renderBurnSection(burns || [], burnPresets || {}, isToday)}
+          ${this.renderBurnSection(burns || [], burnPresets || {}, isToday, garminData)}
 
           <div class="entries-list">
             <h2>Entries${entries.length > 0 ? ` (${entries.length})` : ''}</h2>

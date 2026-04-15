@@ -35,6 +35,11 @@ function saveConfig(url, anonKey, claudeKey) {
   }));
 }
 
+// Garmin baseline: the calorie target already assumes ~6k steps/day of activity.
+// Only count Garmin active calories ABOVE this baseline as "extra burn."
+const GARMIN_BASELINE_STEPS = 6000;
+const GARMIN_BASELINE_ACTIVE_CAL = 200;
+
 const NUTRIENT_TARGETS = {
   calories:      { goal: 1680, unit: "kcal", direction: "max", color: "#a3e635", label: "Calories" },
   fiber:         { goal: 38,   unit: "g",    direction: "min", color: "#22d3ee", label: "Fiber" },

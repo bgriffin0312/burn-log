@@ -149,6 +149,38 @@ async function deleteBurnEntry(id) {
   if (error) throw error;
 }
 
+// ── Garmin Daily ──
+
+async function getGarminDaily(date) {
+  const { data, error } = await db
+    .from("garmin_daily")
+    .select("*")
+    .eq("date", date)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getGarminDailyRange(startDate, endDate) {
+  const { data, error } = await db
+    .from("garmin_daily")
+    .select("*")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+async function upsertGarminDaily(entry) {
+  const { data, error } = await db
+    .from("garmin_daily")
+    .upsert([entry], { onConflict: "date" })
+    .select();
+  if (error) throw error;
+  return data[0];
+}
+
 // ── Helpers ──
 
 function todayString() {

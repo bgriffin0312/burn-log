@@ -16,15 +16,17 @@ const Charts = {
     try {
       const today = todayString();
       const startDate = new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
-      const [entries, burns] = await Promise.all([
+      const [entries, burns, garminDays] = await Promise.all([
         getEntriesForDateRange(startDate, today),
-        getBurnsForDateRange(startDate, today)
+        getBurnsForDateRange(startDate, today),
+        getGarminDailyRange(startDate, today).catch(() => [])
       ]);
 
       // Build 14 days of data
       const labels = [];
       const data = {
-        calories: [], net_calories: [], burned: [], fiber: [], saturated_fat: [],
+        calories: [], net_calories: [], burned: [], steps: [],
+        fiber: [], saturated_fat: [],
         protein: [], sodium: [], added_sugar: [], vitamin_d: []
       };
 
@@ -36,10 +38,14 @@ const Charts = {
         const totals = calcTotals(dayEntries);
         const burned = dayBurns.reduce((s, b) => s + (b.calories || 0), 0);
 
+        const garmin = garminDays.find(g => g.date === dateStr);
+        const steps = garmin ? (garmin.total_steps || 0) : 0;
+
         labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
         data.calories.push(totals.calories);
         data.net_calories.push(totals.calories - burned);
         data.burned.push(burned);
+        data.steps.push(steps);
         data.fiber.push(totals.fiber);
         data.saturated_fat.push(totals.saturated_fat);
         data.protein.push(totals.protein);
@@ -54,6 +60,7 @@ const Charts = {
         <div class="trends-charts">
           <div class="chart-wrap"><canvas id="chart-calories"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-burned"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-steps"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-protein"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-fiber"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-satfat"></canvas></div>
@@ -101,6 +108,8 @@ const Charts = {
         ], chartDefaults);
       this.createChart("chart-burned", "Extra Calories Burned", labels, data.burned,
         "#f97316", [], chartDefaults);
+      this.createChart("chart-steps", "Steps", labels, data.steps,
+        "#38bdf8", [{ value: GARMIN_BASELINE_STEPS, label: "Baseline: " + GARMIN_BASELINE_STEPS, color: "#38bdf866" }], chartDefaults);
       this.createChart("chart-protein", "Protein (g)", labels, data.protein,
         "#34d399", NUTRIENT_TARGETS.protein.goal, chartDefaults);
       this.createChart("chart-fiber", "Fiber (g)", labels, data.fiber,

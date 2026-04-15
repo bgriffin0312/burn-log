@@ -3,6 +3,7 @@ const App = {
   currentDate: todayString(),
   entries: [],
   burns: [],
+  garminData: null,
   customPresets: {},
   burnPresets: {},
   photoFile: null,
@@ -28,10 +29,11 @@ const App = {
     }
 
     try {
-      const [customPresetsData, entries, burns] = await Promise.all([
+      const [customPresetsData, entries, burns, garminData] = await Promise.all([
         getCustomPresets(),
         getEntriesForDate(this.currentDate),
-        getBurnsForDate(this.currentDate)
+        getBurnsForDate(this.currentDate),
+        getGarminDaily(this.currentDate).catch(() => null)
       ]);
 
       this.customPresets = {};
@@ -41,7 +43,9 @@ const App = {
 
       this.entries = entries;
       this.burns = burns;
+      this.garminData = garminData;
       this.loadBurnPresets();
+      await this.syncGarminBurns();
       this.render();
 
       // Track when the user started logging
@@ -101,6 +105,7 @@ const App = {
       currentDate: this.currentDate,
       entries: this.entries,
       burns: this.burns,
+      garminData: this.garminData,
       burnPresets: this.burnPresets,
       customPresets: this.customPresets,
       feedback: this.feedback,
@@ -244,6 +249,37 @@ const App = {
           console.error("Failed to delete preset:", err);
         }
       });
+    });
+
+    // Settings: Garmin manual entry form
+    document.getElementById("garmin-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const steps = parseInt(document.getElementById("garmin-steps").value) || 0;
+      const activeCal = parseFloat(document.getElementById("garmin-active-cal").value) || 0;
+      const restingHr = parseInt(document.getElementById("garmin-resting-hr").value) || null;
+      const sleepHours = parseFloat(document.getElementById("garmin-sleep").value) || null;
+      const bbHigh = parseInt(document.getElementById("garmin-bb-high").value) || null;
+      const bbLow = parseInt(document.getElementById("garmin-bb-low").value) || null;
+
+      try {
+        const saved = await upsertGarminDaily({
+          date: todayString(),
+          total_steps: steps,
+          active_calories: activeCal,
+          resting_hr: restingHr,
+          stress_avg: null,
+          sleep_hours: sleepHours,
+          body_battery_high: bbHigh,
+          body_battery_low: bbLow
+        });
+        this.garminData = saved;
+        await this.syncGarminBurns();
+        alert("Garmin data saved.");
+        this.render();
+      } catch (err) {
+        console.error("Failed to save Garmin data:", err);
+        alert("Failed to save: " + err.message);
+      }
     });
 
     // Settings: export CSV
@@ -489,6 +525,54 @@ const App = {
     }
   },
 
+  async syncGarminBurns() {
+    if (!this.garminData) return;
+
+    const activeCal = this.garminData.active_calories || 0;
+    const steps = this.garminData.total_steps || 0;
+    // Garmin replaces the 6k-step baseline with exact tracking.
+    // If steps > 0, Garmin is tracking — use full active_calories.
+    // If steps == 0 (watch not worn), subtract baseline to avoid double-counting.
+    const extraCal = steps > 0
+      ? activeCal
+      : Math.max(0, activeCal - GARMIN_BASELINE_ACTIVE_CAL);
+    if (extraCal <= 0) return;
+
+    const existing = this.burns.find(b => b.source === "garmin");
+    if (existing) {
+      // Update if the calorie value changed (re-sync)
+      if (Math.round(existing.calories) !== Math.round(extraCal) ||
+          existing.steps !== (this.garminData.total_steps || 0)) {
+        const { data, error } = await db
+          .from("burn_entries")
+          .update({
+            calories: extraCal,
+            steps: this.garminData.total_steps || 0,
+            duration_mins: null
+          })
+          .eq("id", existing.id)
+          .select();
+        if (!error && data[0]) {
+          const idx = this.burns.findIndex(b => b.id === existing.id);
+          if (idx >= 0) this.burns[idx] = data[0];
+        }
+      }
+    } else {
+      // Create new garmin burn entry
+      const saved = await addBurnEntry({
+        date: this.garminData.date,
+        time: "00:00",
+        name: "Garmin Daily Activity",
+        calories: extraCal,
+        activity_type: "other",
+        duration_mins: null,
+        steps: this.garminData.total_steps || 0,
+        source: "garmin"
+      });
+      this.burns.push(saved);
+    }
+  },
+
   async requestFeedback() {
     if (!CONFIG.CLAUDE_API_KEY || this.feedbackLoading) return;
 
@@ -567,12 +651,15 @@ const App = {
     const main = document.getElementById("main");
     main.style.opacity = "0.5";
     try {
-      const [entries, burns] = await Promise.all([
+      const [entries, burns, garminData] = await Promise.all([
         getEntriesForDate(this.currentDate),
-        getBurnsForDate(this.currentDate)
+        getBurnsForDate(this.currentDate),
+        getGarminDaily(this.currentDate).catch(() => null)
       ]);
       this.entries = entries;
       this.burns = burns;
+      this.garminData = garminData;
+      await this.syncGarminBurns();
       this.render();
     } catch (err) {
       console.error("Failed to load entries:", err);

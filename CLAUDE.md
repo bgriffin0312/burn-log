@@ -416,14 +416,17 @@ Users should be prompted to enter their Supabase credentials and Claude API key 
 - Step total displayed in exercise section header
 - source field is "manual" for user entries, "garmin" for future auto-sync
 
-### Session 7 Phase 2: GarminGo integration (future)
-- Add a `garmin_daily` table that GarminGo or a sync bridge can write to
-- App reads from this table to auto-populate exercise data
-- When Garmin data exists, use `active_calories` for burn calculation
-- Only count calories ABOVE the ~6k steps/day baseline baked into the calorie target
+### Session 7 Phase 2: Garmin daily integration (done)
+- `garmin_daily` table stores daily Garmin summaries (steps, active_calories, resting HR, sleep, body battery)
+- App reads garmin_daily on load and auto-creates a `source: "garmin"` burn entry
+- **Baseline logic**: When Garmin is tracking (steps >= 6000), full `active_calories` counts as extra burn. When watch appears not worn (steps < 6000), subtracts 200 baseline cal to avoid double-counting.
+- Garmin card in exercise section shows steps, active cal, extra burn, plus optional HR/sleep/body battery
+- Manual Garmin data entry form in Settings (for use until auto-sync bridge exists)
+- Steps trend chart with 6k baseline line in Trends tab
+- Constants: `GARMIN_BASELINE_STEPS = 6000`, `GARMIN_BASELINE_ACTIVE_CAL = 200` in config.js
 
+**SQL to run in Supabase** (required before using this feature):
 ```sql
--- Phase 2: Garmin daily summary (run when ready to integrate)
 CREATE TABLE garmin_daily (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date TEXT UNIQUE NOT NULL,
@@ -442,6 +445,13 @@ CREATE INDEX idx_garmin_daily_date ON garmin_daily(date);
 ALTER TABLE garmin_daily ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on garmin_daily" ON garmin_daily FOR ALL USING (true) WITH CHECK (true);
 ```
+
+### Session 7 Phase 2b: Garmin auto-sync via GitHub Action (done)
+- `scripts/garmin_sync.py` — Python script using `garminconnect` + `supabase-py`
+- `.github/workflows/garmin-sync.yml` — Runs every 4 hours + manual dispatch
+- Fetches: steps, active calories, resting HR, stress avg, sleep hours, body battery
+- Upserts to `garmin_daily` table in Supabase
+- **GitHub Secrets required**: `GARMIN_EMAIL`, `GARMIN_PASSWORD`, `SUPABASE_URL`, `SUPABASE_KEY`
 
 ### Session 7 Phase 3: Garmin Calendar feed (future)
 - User publishes their Garmin Connect training calendar (ICS feed)

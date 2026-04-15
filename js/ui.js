@@ -243,7 +243,7 @@ const UI = {
       return `
         <div class="feedback-card">
           <div class="feedback-header">
-            <span class="feedback-title">Daily Check-in</span>
+            <span class="feedback-title">Yesterday's Review</span>
             <button id="dismiss-feedback" class="feedback-dismiss">&times;</button>
           </div>
           <p class="feedback-text">${feedback.feedback}</p>

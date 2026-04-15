@@ -121,7 +121,13 @@ async function estimateBurnWithClaude(text) {
 
 const CLAUDE_FEEDBACK_PROMPT = `You are a supportive but honest nutrition coach for a 49-year-old man (5'10", 215 lbs) working on weight loss, managing high LDL cholesterol (148), borderline A1C (5.6), and low vitamin D (19 ng/mL). His calorie target is set for ~1 lb/week loss assuming a sedentary baseline of ~6000 steps/day.
 
-You'll receive his daily nutrition data and a 7-day rolling average. Give brief, conversational feedback (3-5 sentences max). Your tone should be encouraging but real — like a good friend who also knows nutrition.
+You'll receive yesterday's complete nutrition data, a 7-day rolling average, and today's partial data (what's been logged so far). Your job is to REVIEW YESTERDAY and give a brief heads-up for today.
+
+Structure your feedback in two parts:
+1. Yesterday review (2-3 sentences): How did yesterday go? Call out wins and concerns.
+2. Today note (1 sentence): A brief encouragement or heads-up for today based on the rolling trend and what's logged so far.
+
+Tone: encouraging but real — like a good friend who also knows nutrition.
 
 Guidelines:
 - Any day in a calorie deficit is progress, even if under the 1 lb/week pace. Acknowledge it.
@@ -133,16 +139,16 @@ Guidelines:
 
 Respond ONLY with valid JSON, no markdown fences.
 Format: { "feedback": "Your message here", "highlights": ["one", "two"], "concerns": ["one"] }
-- highlights: 1-3 brief positive things (shown as green chips)
+- highlights: 1-3 brief positive things from yesterday (shown as green chips)
 - concerns: 0-2 brief things to watch (shown as orange chips)
 - Either array can be empty.`;
 
-async function getDailyFeedback(todayData, weekData, missingDays) {
+async function getDailyFeedback(yesterdayData, todayData, weekData, missingDays) {
   if (!CONFIG.CLAUDE_API_KEY) {
     throw new Error("Claude API key not configured.");
   }
 
-  const userMessage = JSON.stringify({ today: todayData, rolling_7_day: weekData, missing_days: missingDays });
+  const userMessage = JSON.stringify({ yesterday: yesterdayData, today_so_far: todayData, rolling_7_day: weekData, missing_days: missingDays });
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

@@ -581,8 +581,9 @@ const App = {
     this.render();
 
     try {
-      // Gather 7 days of data
+      // Gather 7 days of data (yesterday is the focus, today is partial context)
       const today = todayString();
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       const [allEntries, allBurns] = await Promise.all([
         getEntriesForDateRange(sevenDaysAgo, today),
@@ -612,19 +613,22 @@ const App = {
         };
       }
 
-      // Rolling averages
-      const dayValues = Object.values(days).filter(d => d.entries > 0);
+      // Rolling averages (exclude today since it's incomplete)
+      const pastDayValues = Object.entries(days)
+        .filter(([d, v]) => d !== today && v.entries > 0)
+        .map(([, v]) => v);
       const avg = {};
-      if (dayValues.length > 0) {
+      if (pastDayValues.length > 0) {
         for (const key of ["calories", "fiber", "saturated_fat", "sodium", "protein", "added_sugar", "vitamin_d", "net_calories"]) {
-          avg[key] = Math.round(dayValues.reduce((s, d) => s + (d[key] || 0), 0) / dayValues.length);
+          avg[key] = Math.round(pastDayValues.reduce((s, d) => s + (d[key] || 0), 0) / pastDayValues.length);
         }
-        avg.days_logged = dayValues.length;
+        avg.days_logged = pastDayValues.length;
       }
 
-      const todayData = days[today];
+      const yesterdayData = days[yesterday] || { entries: 0 };
+      const todayData = days[today] || { entries: 0 };
       const weekData = { daily_averages: avg, target_calories: NUTRIENT_TARGETS.calories.goal, days };
-      const result = await getDailyFeedback(todayData, weekData, missingDays);
+      const result = await getDailyFeedback(yesterdayData, todayData, weekData, missingDays);
 
       this.feedback = result;
       localStorage.setItem("burnlog_last_feedback_date", today);

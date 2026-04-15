@@ -99,13 +99,13 @@ const Charts = {
         },
         scales: {
           x: {
-            ticks: { color: '#555', font: { size: 9, family: "'JetBrains Mono', monospace" }, maxRotation: 45 },
-            grid: { color: '#1a1a1a' }
+            ticks: { color: '#888', font: { size: 9, family: "'JetBrains Mono', monospace" }, maxRotation: 45 },
+            grid: { color: '#2a2a2a' }
           },
           y: {
             beginAtZero: true,
-            ticks: { color: '#555', font: { size: 10, family: "'JetBrains Mono', monospace" } },
-            grid: { color: '#1a1a1a' }
+            ticks: { color: '#888', font: { size: 10, family: "'JetBrains Mono', monospace" } },
+            grid: { color: '#2a2a2a' }
           }
         }
       };
@@ -175,7 +175,7 @@ const Charts = {
           content: line.label,
           position: 'end',
           backgroundColor: 'transparent',
-          color: '#666',
+          color: '#999',
           font: { size: 9, family: "'JetBrains Mono', monospace" }
         }
       };
@@ -189,7 +189,7 @@ const Charts = {
           {
             label: title,
             data,
-            backgroundColor: data.map(() => color + "55"),
+            backgroundColor: data.map(() => color + "99"),
             borderColor: color,
             borderWidth: 1,
             borderRadius: 3
@@ -203,7 +203,7 @@ const Charts = {
           title: {
             display: true,
             text: title,
-            color: '#888',
+            color: '#bbb',
             font: { size: 12, family: "'DM Sans', sans-serif", weight: '500' },
             padding: { bottom: 8 }
           },

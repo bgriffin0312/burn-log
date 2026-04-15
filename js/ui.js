@@ -43,14 +43,20 @@ const UI = {
 
   // ── Nutrient Bars ──
 
-  renderNutrientBars(totals) {
+  dynamicProteinGoal(burned) {
+    const totalBudget = NUTRIENT_TARGETS.calories.goal + (burned || 0);
+    return Math.min(200, Math.max(120, Math.round(totalBudget * 0.30 / 4)));
+  },
+
+  renderNutrientBars(totals, burned) {
     return Object.entries(NUTRIENT_TARGETS)
       .filter(([key]) => key !== "calories")
       .map(([key, target]) => {
+        const goal = key === "protein" ? this.dynamicProteinGoal(burned) : target.goal;
         const value = totals[key] || 0;
-        const pct = Math.min((value / target.goal) * 100, 100);
-        const over = target.direction === "max" && value > target.goal;
-        const met = target.direction === "min" && value >= target.goal;
+        const pct = Math.min((value / goal) * 100, 100);
+        const over = target.direction === "max" && value > goal;
+        const met = target.direction === "min" && value >= goal;
         let barColor = target.color;
         if (over) barColor = "#ef4444";
         if (met) barColor = "#a3e635";
@@ -60,7 +66,7 @@ const UI = {
             <div class="nutrient-bar-bg">
               <div class="nutrient-bar-fill" style="width:${pct}%; background:${barColor}"></div>
             </div>
-            <span class="nutrient-value">${Math.round(value)}<span class="nutrient-sep">/</span>${target.goal}<span class="nutrient-unit">${target.unit}</span></span>
+            <span class="nutrient-value">${Math.round(value)}<span class="nutrient-sep">/</span>${goal}<span class="nutrient-unit">${target.unit}</span></span>
           </div>
         `;
       }).join('');
@@ -434,7 +440,7 @@ const UI = {
           <div class="dashboard">
             ${this.renderCalorieRing(totals.calories, NUTRIENT_TARGETS.calories.goal, totalBurned)}
             <div class="nutrient-bars">
-              ${this.renderNutrientBars(totals)}
+              ${this.renderNutrientBars(totals, totalBurned)}
             </div>
           </div>
 

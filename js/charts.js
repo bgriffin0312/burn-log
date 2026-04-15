@@ -26,7 +26,7 @@ const Charts = {
       const labels = [];
       const data = {
         calories: [], net_calories: [], burned: [], steps: [],
-        sleep_hours: [], avg_hrv: [],
+        sleep_hours: [], sleep_score: [], avg_hrv: [], stress: [],
         fiber: [], saturated_fat: [],
         protein: [], sodium: [], added_sugar: [], vitamin_d: []
       };
@@ -48,7 +48,9 @@ const Charts = {
         data.burned.push(burned);
         data.steps.push(steps);
         data.sleep_hours.push(garmin ? (garmin.sleep_hours || 0) : 0);
+        data.sleep_score.push(garmin ? (garmin.sleep_score || 0) : 0);
         data.avg_hrv.push(garmin ? (garmin.avg_hrv || 0) : 0);
+        data.stress.push(garmin ? (garmin.stress_avg || 0) : 0);
         data.fiber.push(totals.fiber);
         data.saturated_fat.push(totals.saturated_fat);
         data.protein.push(totals.protein);
@@ -65,7 +67,9 @@ const Charts = {
           <div class="chart-wrap"><canvas id="chart-burned"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-steps"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-sleep"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-sleep-score"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
+          <div class="chart-wrap"><canvas id="chart-stress"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-protein"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-fiber"></canvas></div>
           <div class="chart-wrap"><canvas id="chart-satfat"></canvas></div>
@@ -117,8 +121,15 @@ const Charts = {
         "#38bdf8", [{ value: GARMIN_BASELINE_STEPS, label: "Baseline: " + GARMIN_BASELINE_STEPS, color: "#38bdf866" }], chartDefaults);
       this.createChart("chart-sleep", "Sleep (hours)", labels, data.sleep_hours,
         "#6366f1", [{ value: 7, label: "Goal: 7h", color: "#6366f166" }], chartDefaults);
+      this.createChart("chart-sleep-score", "Sleep Score", labels, data.sleep_score,
+        "#6366f1", [{ value: 80, label: "Good: 80", color: "#6366f166" }], chartDefaults);
       this.createChart("chart-hrv", "HRV (nightly avg)", labels, data.avg_hrv,
         "#a78bfa", [], chartDefaults);
+      this.createChart("chart-stress", "Stress (daily avg)", labels, data.stress,
+        "#fbbf24", [
+          { value: 30, label: "Low: 30", color: "#a3e63566" },
+          { value: 50, label: "High: 50", color: "#f9731666" }
+        ], chartDefaults);
       this.createChart("chart-protein", "Protein (g)", labels, data.protein,
         "#34d399", NUTRIENT_TARGETS.protein.goal, chartDefaults);
       this.createChart("chart-fiber", "Fiber (g)", labels, data.fiber,

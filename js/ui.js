@@ -94,6 +94,7 @@ const UI = {
       { value: entry.sodium, unit: 'mg na', cls: 'sodium' },
       { value: entry.added_sugar, unit: 'g sug', cls: 'sugar' },
       { value: entry.vitamin_d, unit: 'IU D', cls: 'vitd' },
+      { value: entry.standard_drinks, unit: 'drinks', cls: 'drinks' },
     ];
 
     return `
@@ -413,6 +414,7 @@ const UI = {
     const { currentDate, entries, burns, garminData, burnPresets, customPresets, feedback, feedbackLoading, activeTab } = state;
     const totals = calcTotals(entries);
     const totalBurned = (burns || []).reduce((sum, b) => sum + (b.calories || 0), 0);
+    const totalDrinks = entries.reduce((sum, e) => sum + (e.standard_drinks || 0), 0);
     const isToday = currentDate === todayString();
     const tab = activeTab || "log";
 
@@ -442,6 +444,7 @@ const UI = {
             <div class="nutrient-bars">
               ${this.renderNutrientBars(totals, totalBurned)}
             </div>
+            ${totalDrinks > 0 ? `<div class="daily-drinks"><span class="drinks-icon">&#x1F37A;</span> ${totalDrinks.toFixed(1)} standard drinks today</div>` : ''}
           </div>
 
           ${isToday ? this.renderInputArea(customPresets) : ''}

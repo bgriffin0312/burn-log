@@ -1,7 +1,7 @@
 // Claude API integration for food estimation
 
 const CLAUDE_SYSTEM_PROMPT = `You are a concise nutrition estimator. Respond ONLY with valid JSON, no markdown fences.
-Format: { "items": [{ "name": "Food name", "calories": 350, "portion": "1 cup", "fiber_g": 5, "saturated_fat_g": 2, "sodium_mg": 400, "protein_g": 15, "added_sugar_g": 0, "vitamin_d_iu": 0 }], "total_calories": 350, "notes": "brief note if needed" }
+Format: { "items": [{ "name": "Food name", "calories": 350, "portion": "1 cup", "fiber_g": 5, "saturated_fat_g": 2, "sodium_mg": 400, "protein_g": 15, "added_sugar_g": 0, "vitamin_d_iu": 0, "standard_drinks": 0 }], "total_calories": 350, "notes": "brief note if needed" }
 Be realistic with portions. When the user specifies a quantity (e.g. "4 pretzel crisps", "3 chips"), calculate nutrition for EXACTLY that amount — do NOT round up to a standard serving size. Scale all nutrients proportionally from the per-serving data. Estimate all nutrient fields as accurately as possible.
 - fiber_g: total dietary fiber in grams
 - saturated_fat_g: saturated fat only (not total fat) in grams
@@ -9,6 +9,7 @@ Be realistic with portions. When the user specifies a quantity (e.g. "4 pretzel 
 - protein_g: protein in grams
 - added_sugar_g: ADDED sugars only (not naturally occurring sugars from fruit/dairy) in grams
 - vitamin_d_iu: vitamin D in International Units. Key sources: fatty fish (~450 IU/3oz), fortified milk (~120 IU/cup), eggs (~44 IU each). Most foods have 0.
+- standard_drinks: number of US standard drinks (1 std drink = 0.6 fl oz pure alcohol). Formula: (volume_oz × ABV) / 0.6. Examples: 12oz 5% beer = 1.0, 12oz 6.5% IPA = 1.3, 16oz 6.5% IPA = 1.73, 5oz 13% wine = 1.08, 5oz 12% rosé = 1.0. For non-alcoholic items, use 0.
 If you see a photo, estimate based on visual size. If uncertain, give your best estimate and note it.`;
 
 async function estimateWithClaude(text, photoFile) {

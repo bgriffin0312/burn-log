@@ -415,7 +415,8 @@ const App = {
       protein: entry.protein || 0,
       added_sugar: entry.added_sugar || 0,
       vitamin_d: entry.vitamin_d || 0,
-      emoji: "\u{1F37D}"
+      standard_drinks: entry.standard_drinks || 0,
+      emoji: entry.standard_drinks > 0 ? "\u{1F37A}" : "\u{1F37D}"
     };
 
     try {

@@ -467,6 +467,44 @@ ALTER TABLE garmin_daily
   ADD COLUMN IF NOT EXISTS avg_hrv REAL;
 ```
 
+### Session 8: Weekly Tripwire System (done)
+- **Standard drinks tracking**: `standard_drinks` column added to `food_entries` and `custom_presets`. Claude food estimation prompt includes standard drink calculation (formula: `volume_oz × ABV / 0.6`). UI shows amber drink chip on entries and daily total.
+- **Thursday Planning Prompt** (6 PM Central): Email with Mon-Thu exercise count and drink total, plus weekend pre-commitment nudge
+- **Sunday Weekly Review** (8 PM Central): Color-coded scorecard email with exercise (3+/2/0-1), alcohol (≤7/8-14/15+), sleep (7+/6-7/<6), logging completeness (7/7/5-6/≤4), and missing data flags
+- **Cascade Warning**: `weekly_scorecards` table stores results; 2 consecutive weeks with 2+ reds triggers warning, 3+ triggers escalation
+- **Delivery**: GitHub Actions cron → Python script queries Supabase → email via Resend API with .ics calendar attachment
+- **Files**: `scripts/weekly_tripwire.py`, `.github/workflows/weekly-tripwire.yml`
+- **GitHub Secrets required**: `RESEND_API_KEY` (in addition to existing `SUPABASE_URL`, `SUPABASE_KEY`)
+- **Exercise day definition**: Any day with a `source='manual'` burn entry (Garmin passive activity doesn't count)
+
+**SQL to run in Supabase** (required before using this feature):
+```sql
+ALTER TABLE food_entries ADD COLUMN standard_drinks REAL DEFAULT 0;
+ALTER TABLE custom_presets ADD COLUMN standard_drinks REAL DEFAULT 0;
+
+CREATE TABLE weekly_scorecards (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  week_start TEXT NOT NULL,
+  week_end TEXT NOT NULL,
+  exercise_days INTEGER DEFAULT 0,
+  total_drinks REAL DEFAULT 0,
+  avg_sleep REAL,
+  days_logged INTEGER DEFAULT 0,
+  exercise_rating TEXT,
+  alcohol_rating TEXT,
+  sleep_rating TEXT,
+  logging_rating TEXT,
+  missing_days TEXT,
+  red_count INTEGER DEFAULT 0,
+  cascade_count INTEGER DEFAULT 0,
+  report_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(week_start, report_type)
+);
+ALTER TABLE weekly_scorecards ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on weekly_scorecards" ON weekly_scorecards FOR ALL USING (true) WITH CHECK (true);
+```
+
 ### Session 7 Phase 3: Garmin Calendar feed (future)
 - User publishes their Garmin Connect training calendar (ICS feed)
 - Subscribe to it in Google Calendar

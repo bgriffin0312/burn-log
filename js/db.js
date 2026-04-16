@@ -205,6 +205,7 @@ function buildEntryFromPreset(key, preset) {
     protein: preset.protein,
     added_sugar: preset.added_sugar,
     vitamin_d: preset.vitamin_d,
+    standard_drinks: preset.standard_drinks || 0,
     preset_key: key,
     from_claude: false
   };
@@ -223,6 +224,7 @@ function buildEntryFromClaude(item) {
     protein: item.protein_g || 0,
     added_sugar: item.added_sugar_g || 0,
     vitamin_d: item.vitamin_d_iu || 0,
+    standard_drinks: item.standard_drinks || 0,
     from_claude: true
   };
 }

@@ -1,0 +1,38 @@
+name: Weekly Tripwire
+
+on:
+  schedule:
+    # Thursday 6 PM Central (CDT=UTC-5, CST=UTC-6)
+    # 23:00 UTC = 6 PM CDT / 5 PM CST
+    - cron: '0 23 * * 4'
+    # Sunday 8 PM Central
+    # 01:00 UTC Monday = 8 PM CDT Sunday / 7 PM CST Sunday
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'Report type: thursday_check or sunday_review'
+        required: true
+        default: 'sunday_review'
+
+jobs:
+  tripwire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run tripwire report
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          REPORT_TYPE: ${{ inputs.report_type || (github.event.schedule == '0 23 * * 4' && 'thursday_check' || 'sunday_review') }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        run: python scripts/weekly_tripwire.py

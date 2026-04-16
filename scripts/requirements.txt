@@ -1,2 +1,3 @@
 garminconnect>=0.2.19
 supabase>=2.0.0
+requests>=2.31.0

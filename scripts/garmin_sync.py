@@ -72,14 +72,6 @@ def fetch_night_stats(client, wake_date):
         sleep_data = client.get_sleep_data(date_str)
         if sleep_data and sleep_data.get("dailySleepDTO"):
             dto = sleep_data["dailySleepDTO"]
-            sleep_seconds = dto.get("sleepTimeInSeconds")
-            if sleep_seconds:
-                result["sleep_hours"] = round(sleep_seconds / 3600, 1)
-            # Sleep score
-            if dto.get("sleepScores"):
-                score = dto["sleepScores"].get("overall", {}).get("value")
-                if score is not None:
-                    result["sleep_score"] = score
             # Sleep stages (seconds → minutes)
             for field, key in [("deepSleepSeconds", "deep_sleep_mins"),
                                ("lightSleepSeconds", "light_sleep_mins"),
@@ -88,6 +80,32 @@ def fetch_night_stats(client, wake_date):
                 val = dto.get(field)
                 if val is not None:
                     result[key] = round(val / 60)
+            # Total sleep — try common key variants, then fall back to
+            # sum of stages, then derive from start/end timestamps.
+            sleep_seconds = (
+                dto.get("sleepTimeSeconds")
+                or dto.get("sleepTimeInSeconds")
+                or dto.get("sleepDurationSeconds")
+            )
+            if not sleep_seconds:
+                stage_secs = sum(
+                    dto.get(k) or 0
+                    for k in ("deepSleepSeconds", "lightSleepSeconds", "remSleepSeconds")
+                )
+                if stage_secs:
+                    sleep_seconds = stage_secs
+            if not sleep_seconds:
+                start = dto.get("sleepStartTimestampGMT")
+                end = dto.get("sleepEndTimestampGMT")
+                if start and end and end > start:
+                    sleep_seconds = (end - start) / 1000
+            if sleep_seconds:
+                result["sleep_hours"] = round(sleep_seconds / 3600, 1)
+            # Sleep score
+            if dto.get("sleepScores"):
+                score = dto["sleepScores"].get("overall", {}).get("value")
+                if score is not None:
+                    result["sleep_score"] = score
     except Exception as e:
         print(f"  Warning: Could not fetch sleep data: {e}")
 

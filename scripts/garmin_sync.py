@@ -100,7 +100,15 @@ def fetch_night_stats(client, wake_date):
                 if start and end and end > start:
                     sleep_seconds = (end - start) / 1000
             if sleep_seconds:
-                result["sleep_hours"] = round(sleep_seconds / 3600, 1)
+                sleep_hours = round(sleep_seconds / 3600, 1)
+                # Sanity cap: >14h is almost always a watch-on-charger or
+                # bedside artifact. Write NULL so the chart shows a gap
+                # instead of a bogus spike (and clears any prior bad value).
+                if sleep_hours > 14:
+                    print(f"  Warning: sleep_hours={sleep_hours} exceeds sanity cap; writing NULL")
+                    result["sleep_hours"] = None
+                else:
+                    result["sleep_hours"] = sleep_hours
             # Sleep score
             if dto.get("sleepScores"):
                 score = dto["sleepScores"].get("overall", {}).get("value")

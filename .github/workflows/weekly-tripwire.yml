@@ -33,6 +33,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           REPORT_TYPE: ${{ inputs.report_type || (github.event.schedule == '0 23 * * 4' && 'thursday_check' || 'sunday_review') }}
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         run: python scripts/weekly_tripwire.py

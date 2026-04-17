@@ -475,7 +475,7 @@ ALTER TABLE garmin_daily
 - **Delivery**: GitHub Actions cron → Python script queries Supabase → email via Resend API with .ics calendar attachment
 - **Files**: `scripts/weekly_tripwire.py`, `.github/workflows/weekly-tripwire.yml`
 - **GitHub Secrets required**: `RESEND_API_KEY` (in addition to existing `SUPABASE_URL`, `SUPABASE_KEY`)
-- **Exercise day definition**: Any day with a `source='manual'` burn entry (Garmin passive activity doesn't count)
+- **Exercise day definition**: Any day with an intentional burn entry — `source != 'garmin'` (Garmin's daily passive aggregate doesn't count). Session 10 widened this from `source == 'manual'` so Caliber sessions imported via Strava also count.
 
 **SQL to run in Supabase** (required before using this feature):
 ```sql
@@ -568,6 +568,34 @@ ALTER TABLE weekly_scorecards
   ADD COLUMN IF NOT EXISTS cardio_rating TEXT,
   ADD COLUMN IF NOT EXISTS lift_rating TEXT;
 ```
+
+### Session 10: Strava -> Caliber strength import
+- **Why Strava for Caliber only**: Caliber has no public API, but it pushes completed strength workouts to Strava as activities with `sport_type` in (`WeightTraining`, `Workout`). Garmin also pushes to Strava, but daily Garmin data is richer through `garmin_sync.py` — so the Strava sync is strict: it imports ONLY Caliber's strength sessions and skips everything else (Run, Ride, Walk, Hike, Swim, etc.).
+- **Reuses `burn_entries`** (not a separate table) so Caliber sessions appear in the main app UI, count toward the Tripwire lift rating, and dedupe with the existing burn logic.
+- **No double-count logic on calories**: user does not currently track gym as a Garmin activity, so ambient-HR overlap is small (~50-100 cal out of a 300-500 cal lift). Caliber calories add on top of Garmin active_calories as-is. If user starts tracking lifts as Garmin activities in the future, revisit with an activity-level dedupe (match by time window).
+- **Files**: `scripts/strava_sync.py`, `scripts/.env.example`, `.github/workflows/strava-sync.yml`. Uses same `scripts/requirements.txt` (adds `python-dotenv`).
+- **GitHub Secrets required**: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`. See Strava OAuth setup docs.
+- **Token rotation**: Strava occasionally rotates refresh tokens. If the sync logs `WARNING: Strava returned a new refresh_token`, update the GitHub Secret before the next run.
+- **Schedule**: cron `30 */4 * * *` (every 4 hours, offset 30 min from Garmin sync to avoid simultaneous API load).
+
+**SQL to run in Supabase** (required):
+```sql
+ALTER TABLE burn_entries ADD COLUMN IF NOT EXISTS strava_id BIGINT UNIQUE;
+CREATE INDEX IF NOT EXISTS idx_burn_entries_strava_id ON burn_entries(strava_id);
+```
+
+**Strava OAuth one-time setup** (to obtain `STRAVA_REFRESH_TOKEN`):
+1. Create an app at https://www.strava.com/settings/api — note Client ID + Client Secret
+2. Authorize in a browser (replace CLIENT_ID):
+   `https://www.strava.com/oauth/authorize?client_id=CLIENT_ID&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=activity:read_all`
+3. Strava redirects to `http://localhost/?state=&code=<CODE>&scope=...` — copy the `code`
+4. Exchange for tokens:
+   ```bash
+   curl -X POST https://www.strava.com/oauth/token \
+     -F client_id=CLIENT_ID -F client_secret=CLIENT_SECRET \
+     -F code=<CODE> -F grant_type=authorization_code
+   ```
+5. The response includes `refresh_token` — save that as the `STRAVA_REFRESH_TOKEN` GitHub Secret.
 
 ### Session 7 Phase 3: Garmin Calendar feed (future)
 - User publishes their Garmin Connect training calendar (ICS feed)

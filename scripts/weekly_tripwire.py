@@ -97,10 +97,12 @@ def compute_scorecard(food, burns, garmin, start, end):
     num_days = (end - start).days + 1
     all_dates = [(start + timedelta(days=i)).isoformat() for i in range(num_days)]
 
-    manual_burns = [b for b in burns if b.get("source") == "manual"]
-    cardio_dates = set(b["date"] for b in manual_burns
+    # Count any intentional-exercise burn entry. Garmin's daily aggregate is passive
+    # (steps + ambient HR), not a workout, so it doesn't count as cardio/lift.
+    intentional = [b for b in burns if b.get("source") != "garmin"]
+    cardio_dates = set(b["date"] for b in intentional
                        if (b.get("activity_type") or "other") in CARDIO_ACTIVITY_TYPES)
-    lift_dates = set(b["date"] for b in manual_burns
+    lift_dates = set(b["date"] for b in intentional
                      if (b.get("activity_type") or "") in LIFT_ACTIVITY_TYPES)
     cardio_days = len(cardio_dates)
     lift_days = len(lift_dates)

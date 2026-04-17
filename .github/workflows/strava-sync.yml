@@ -1,0 +1,33 @@
+name: Strava Sync
+
+on:
+  schedule:
+    - cron: '30 */4 * * *'  # Every 4 hours, offset 30 min from Garmin sync
+  workflow_dispatch:
+    inputs:
+      sync_days:
+        description: 'Number of days to sync (default 7)'
+        required: false
+        default: '7'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Sync Caliber sessions from Strava to Supabase
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scripts/strava_sync.py --days ${{ inputs.sync_days || '7' }}

@@ -8,3 +8,7 @@ Desktop.ini
 *.swo
 .vscode/
 .idea/
+
+# Secrets (local runs only — repo uses GitHub Secrets)
+.env
+scripts/.env

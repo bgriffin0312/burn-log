@@ -1,9 +1,10 @@
 // Burn Log Service Worker — offline caching
-const CACHE_NAME = "burnlog-v6";
+const CACHE_NAME = "burnlog-v7";
 
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./tripwire.html",
   "./css/style.css",
   "./js/config.js",
   "./js/presets.js",
@@ -12,6 +13,7 @@ const APP_SHELL = [
   "./js/ui.js",
   "./js/charts.js",
   "./js/app.js",
+  "./js/tripwire.js",
   "./manifest.json",
   "./icons/icon.svg"
 ];

@@ -9,13 +9,16 @@ Required env vars:
   REPORT_TYPE: 'thursday_check' or 'sunday_review'
 Optional:
   RECIPIENT_EMAIL — override default (bgriffin@texasappleseed.org)
+  APP_BASE_URL   — base URL where tripwire.html is hosted (GitHub Pages URL).
+                   Response CTA is omitted from emails when this is not set.
 """
 
 import os
 import sys
 import json
+import secrets
 import base64
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from uuid import uuid4
 
@@ -241,10 +244,42 @@ def rating_emoji(rating):
     return {"green": "\u2705", "yellow": "\u26a0\ufe0f", "red": "\u274c"}.get(rating, "")
 
 
-def build_thursday_email(scorecard, food, burns):
-    """Build HTML email for Thursday planning prompt."""
+def _cta_button_html(label, url):
+    if not url:
+        return ""
+    return f"""
+    <div style="text-align:center; margin:20px 0;">
+      <a href="{url}" style="display:inline-block; background:#a3e635; color:#0a0a0a; font-size:15px; font-weight:600; text-decoration:none; padding:12px 24px; border-radius:8px;">
+        {label}
+      </a>
+      <p style="color:#525252; font-size:11px; margin:8px 0 0 0;">Link expires in 10 days.</p>
+    </div>"""
+
+
+def _lever_panel_html(lever, footer_line=None):
+    if not lever:
+        return ""
+    footer = (f'<p style="color:#737373; font-size:12px; margin:8px 0 0 0;">{footer_line}</p>'
+              if footer_line else "")
+    return f"""
+    <div style="background:#0f1a0f; border:1px solid #264d26; border-radius:10px; padding:14px; margin:16px 0;">
+      <p style="color:#a3a3a3; font-size:12px; margin:0 0 6px 0; text-transform:uppercase; letter-spacing:0.5px;">Last Sunday's lever</p>
+      <p style="color:#d4d4d4; font-size:14px; line-height:1.5; margin:0;">{lever}</p>
+      {footer}
+    </div>"""
+
+
+def build_thursday_email(scorecard, food, burns, response_url=None, prior_sunday_response=None):
+    """Build HTML email for Thursday planning prompt.
+
+    prior_sunday_response: last week's submitted Sunday review (carries lever_next_week).
+    """
     exercise = scorecard["exercise_days"]
     drinks = scorecard["total_drinks"]
+
+    closure_html = _lever_panel_html(
+        (prior_sunday_response or {}).get("lever_next_week"))
+    cta_html = _cta_button_html("Log your weekend pre-commit &rarr;", response_url)
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -253,6 +288,8 @@ def build_thursday_email(scorecard, food, burns):
   <div style="max-width:480px; margin:0 auto;">
     <h1 style="color:#a3e635; font-size:20px; margin-bottom:4px;">Weekend Plan</h1>
     <p style="color:#737373; font-size:13px; margin-top:0;">Burn Log &middot; Thursday Check-in</p>
+
+    {closure_html}
 
     <div style="background:#141414; border:1px solid #262626; border-radius:10px; padding:16px; margin:16px 0;">
       <h2 style="color:#d4d4d4; font-size:15px; margin:0 0 12px 0;">Mon&ndash;Thu So Far</h2>
@@ -274,10 +311,9 @@ def build_thursday_email(scorecard, food, burns):
         How many runs or lifts are you planning Fri&ndash;Sun?<br>
         What&rsquo;s your drink ceiling for the weekend?
       </p>
-      <p style="color:#737373; font-size:12px; margin-top:12px; margin-bottom:0;">
-        No reply needed &mdash; just decide now, before Friday arrives.
-      </p>
     </div>
+
+    {cta_html}
 
     <p style="color:#404040; font-size:11px; text-align:center; margin-top:24px;">
       Burn Log Tripwire System
@@ -288,8 +324,14 @@ def build_thursday_email(scorecard, food, burns):
     return html
 
 
-def build_sunday_email(scorecard, cascade_level):
-    """Build HTML email for Sunday weekly review."""
+def build_sunday_email(scorecard, cascade_level, response_url=None,
+                       same_week_thursday_response=None, prior_sunday_response=None):
+    """Build HTML email for Sunday weekly review.
+
+    same_week_thursday_response: this week's Thursday pre-commit (if submitted),
+        used to evaluate the commitment vs this week's actuals.
+    prior_sunday_response: last week's Sunday reflection (for lever continuity).
+    """
     missing = json.loads(scorecard.get("missing_days", "[]"))
 
     metrics = [
@@ -350,6 +392,36 @@ def build_sunday_email(scorecard, cascade_level):
       </p>
     </div>"""
 
+    # Commitment check: compare this week's Thursday pre-commit vs full-week actuals
+    commitment_html = ""
+    if same_week_thursday_response:
+        planned = same_week_thursday_response.get("planned_exercises")
+        ceiling = same_week_thursday_response.get("drink_ceiling")
+        exercise_actual = scorecard["exercise_days"]
+        drinks_actual = scorecard["total_drinks"]
+        bits = []
+        if planned is not None:
+            icon = "\u2705" if exercise_actual >= planned else "\u274c"
+            bits.append(f"{icon} Exercise: committed {planned}, logged {exercise_actual}")
+        if ceiling is not None:
+            icon = "\u2705" if drinks_actual <= ceiling else "\u274c"
+            bits.append(f"{icon} Drinks: ceiling {ceiling}, at {drinks_actual}")
+        if bits:
+            commitment_html = f"""
+    <div style="background:#0f1a0f; border:1px solid #264d26; border-radius:10px; padding:14px; margin:16px 0;">
+      <p style="color:#a3a3a3; font-size:12px; margin:0 0 6px 0; text-transform:uppercase; letter-spacing:0.5px;">Thursday commitment vs actual</p>
+      <p style="color:#d4d4d4; font-size:14px; line-height:1.6; margin:0;">{'<br>'.join(bits)}</p>
+    </div>"""
+
+    red_count = scorecard["red_count"]
+    red_footer = f"This week: {red_count} red{'s' if red_count != 1 else ''}."
+    lever_html = _lever_panel_html(
+        (prior_sunday_response or {}).get("lever_next_week"),
+        footer_line=red_footer,
+    )
+    closure_html = commitment_html + lever_html
+    cta_html = _cta_button_html("Reflect &amp; pick next week's lever &rarr;", response_url)
+
     week_label = f"{scorecard['week_start']} to {scorecard['week_end']}"
 
     html = f"""<!DOCTYPE html>
@@ -360,12 +432,15 @@ def build_sunday_email(scorecard, cascade_level):
     <h1 style="color:#a3e635; font-size:20px; margin-bottom:4px;">Weekly Scorecard</h1>
     <p style="color:#737373; font-size:13px; margin-top:0;">Burn Log &middot; {week_label}</p>
 
+    {closure_html}
+
     <table style="width:100%; border-collapse:collapse; background:#141414; border:1px solid #262626; border-radius:10px; margin:16px 0;">
       {rows_html}
     </table>
 
     {missing_html}
     {cascade_html}
+    {cta_html}
 
     <p style="color:#404040; font-size:11px; text-align:center; margin-top:24px;">
       Burn Log Tripwire System
@@ -412,12 +487,74 @@ def send_email(to, subject, html_body, ics_content, api_key):
 
 
 def upsert_scorecard(supa, scorecard, report_type):
-    """Store scorecard in weekly_scorecards table."""
+    """Store scorecard in weekly_scorecards table. Returns the row id."""
     record = {**scorecard, "report_type": report_type}
-    supa.table("weekly_scorecards") \
+    result = supa.table("weekly_scorecards") \
         .upsert([record], on_conflict="week_start,report_type") \
         .execute()
-    print(f"Scorecard stored for {scorecard['week_start']} ({report_type})")
+    rows = result.data or []
+    scorecard_id = rows[0]["id"] if rows else None
+    print(f"Scorecard stored for {scorecard['week_start']} ({report_type}) id={scorecard_id}")
+    return scorecard_id
+
+
+def create_response_token(supa, scorecard_id, week_start, report_type, ttl_days=10):
+    """Insert (or reuse) a pending tripwire_responses row and return its token.
+
+    Idempotent on (week_start, report_type): if an unsubmitted row exists for
+    this week/type, return its existing token rather than minting a new one.
+    Submitted responses are left alone; a fresh token is minted in that case,
+    but in practice the script won't run twice for the same week.
+    """
+    existing = supa.table("tripwire_responses") \
+        .select("response_token, submitted_at") \
+        .eq("week_start", week_start) \
+        .eq("report_type", report_type) \
+        .limit(1) \
+        .execute().data or []
+
+    if existing and not existing[0].get("submitted_at"):
+        return existing[0]["response_token"]
+
+    token = secrets.token_urlsafe(24)
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=ttl_days)).isoformat()
+    supa.table("tripwire_responses").insert({
+        "scorecard_id": scorecard_id,
+        "week_start": week_start,
+        "report_type": report_type,
+        "response_token": token,
+        "token_expires_at": expires_at,
+    }).execute()
+    return token
+
+
+def fetch_prior_response(supa, current_week_start, report_type):
+    """Return the most recent submitted response for the given report_type
+    strictly before current_week_start, or None."""
+    result = supa.table("tripwire_responses") \
+        .select("*") \
+        .eq("report_type", report_type) \
+        .lt("week_start", current_week_start) \
+        .not_.is_("submitted_at", "null") \
+        .order("week_start", desc=True) \
+        .limit(1) \
+        .execute()
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
+def fetch_same_week_response(supa, week_start, report_type):
+    """Return this week's submitted response for report_type, or None.
+    Used on Sunday to evaluate the Thursday commitment made earlier in the week."""
+    result = supa.table("tripwire_responses") \
+        .select("*") \
+        .eq("week_start", week_start) \
+        .eq("report_type", report_type) \
+        .not_.is_("submitted_at", "null") \
+        .limit(1) \
+        .execute()
+    rows = result.data or []
+    return rows[0] if rows else None
 
 
 def main():
@@ -426,6 +563,7 @@ def main():
     resend_key = get_env("RESEND_API_KEY")
     report_type = get_env("REPORT_TYPE")
     recipient = os.environ.get("RECIPIENT_EMAIL", DEFAULT_EMAIL)
+    app_base_url = os.environ.get("APP_BASE_URL", "").rstrip("/")
 
     if report_type not in ("thursday_check", "sunday_review"):
         print(f"Error: REPORT_TYPE must be 'thursday_check' or 'sunday_review', got '{report_type}'")
@@ -444,9 +582,28 @@ def main():
     print(f"Scorecard: exercise={scorecard['exercise_days']}, drinks={scorecard['total_drinks']}, "
           f"sleep={scorecard['avg_sleep']}, logged={scorecard['days_logged']}, reds={scorecard['red_count']}")
 
+    # Store scorecard first — we need its id to link the response row
+    scorecard_id = upsert_scorecard(supa, scorecard, report_type)
+
+    # Mint (or reuse) a response token and prior-response lookup for closure loop
+    response_url = None
+    if app_base_url:
+        try:
+            token = create_response_token(supa, scorecard_id, monday.isoformat(), report_type)
+            response_url = f"{app_base_url}/tripwire.html?token={token}"
+            print(f"Response URL: {response_url}")
+        except Exception as e:
+            print(f"Warning: could not create response token: {e}")
+    else:
+        print("APP_BASE_URL not set — skipping interactive response link")
+
     if report_type == "thursday_check":
+        # Thursday shows last Sunday's lever as accountability continuity
+        prior_sunday = fetch_prior_response(supa, monday.isoformat(), "sunday_review")
+        if prior_sunday:
+            print(f"Prior Sunday response found from week {prior_sunday['week_start']}")
         subject = "Weekend Plan \u2014 Exercise & Drinks"
-        html = build_thursday_email(scorecard, food, burns)
+        html = build_thursday_email(scorecard, food, burns, response_url, prior_sunday)
         # Calendar event: Thursday 6 PM Central
         now_ct = datetime.now(CENTRAL)
         event_dt = now_ct.replace(hour=18, minute=0, second=0, microsecond=0)
@@ -463,9 +620,23 @@ def main():
             cascade_level = 0
 
         scorecard["cascade_count"] = cascade_level
+        # Persist cascade_count since upsert_scorecard ran before we computed it
+        supa.table("weekly_scorecards") \
+            .update({"cascade_count": cascade_level}) \
+            .eq("week_start", monday.isoformat()) \
+            .eq("report_type", report_type) \
+            .execute()
 
+        # Sunday evaluates this week's Thursday commitment + carries last Sunday's lever
+        same_week_thursday = fetch_same_week_response(supa, monday.isoformat(), "thursday_check")
+        prior_sunday = fetch_prior_response(supa, monday.isoformat(), "sunday_review")
+        if same_week_thursday:
+            print(f"Same-week Thursday response found")
+        if prior_sunday:
+            print(f"Prior Sunday response found from week {prior_sunday['week_start']}")
         subject = f"Weekly Scorecard \u2014 Burn Log"
-        html = build_sunday_email(scorecard, cascade_level)
+        html = build_sunday_email(scorecard, cascade_level, response_url,
+                                   same_week_thursday, prior_sunday)
         # Calendar event: Sunday 8 PM Central
         now_ct = datetime.now(CENTRAL)
         event_dt = now_ct.replace(hour=20, minute=0, second=0, microsecond=0)
@@ -474,9 +645,6 @@ def main():
                            f"Drinks: {scorecard['total_drinks']}, "
                            f"Sleep: {scorecard['avg_sleep']}h, "
                            f"Logged: {scorecard['days_logged']}/7")
-
-    # Store scorecard
-    upsert_scorecard(supa, scorecard, report_type)
 
     # Send email
     send_email(recipient, subject, html, ics, resend_key)

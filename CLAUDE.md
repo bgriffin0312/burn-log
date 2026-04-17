@@ -505,6 +505,42 @@ ALTER TABLE weekly_scorecards ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on weekly_scorecards" ON weekly_scorecards FOR ALL USING (true) WITH CHECK (true);
 ```
 
+### Session 9: Interactive Tripwire (in progress)
+- Tripwire emails are now two-way. Each Thursday/Sunday email includes a CTA button linking to `tripwire.html?token=<uuid>` on the PWA origin.
+- **Thursday form**: `planned_exercises` (Fri–Sun), `drink_ceiling`, optional notes.
+- **Sunday form**: dropdown per red metric (illness / travel / social / work_stress / low_motivation / schedule_creep / other) stored in `red_causes` JSONB, plus a single `lever_next_week` text field and optional notes.
+- **Closure loop**:
+  - Thursday email surfaces **last Sunday's `lever_next_week`** as accountability continuity.
+  - Sunday email compares **this same week's Thursday commitment** (`planned_exercises`, `drink_ceiling`) against the full-week scorecard, and additionally carries **last Sunday's `lever_next_week`** for continuity.
+  - Same-type week-over-week comparison was deliberately avoided because Thursday commitments are weekend-scoped, not Mon-Thu scoped — evaluating them on Thursday is a category error.
+- **Token model**: Each email mints a per-week single-use `response_token` (base64url, 10-day TTL). Link is idempotent — re-running the workflow for the same week reuses the existing pending token. No auth beyond the token (single-user app).
+- **Files**: `tripwire.html`, `js/tripwire.js`, plus extensions to `scripts/weekly_tripwire.py`.
+- **New GitHub Secret required**: `APP_BASE_URL` (GitHub Pages URL, no trailing slash — e.g. `https://username.github.io/burn-log`). If not set, emails send without the interactive CTA (closure loop still works once responses exist).
+
+**SQL to run in Supabase** (required):
+```sql
+CREATE TABLE tripwire_responses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  scorecard_id UUID REFERENCES weekly_scorecards(id) ON DELETE CASCADE,
+  week_start TEXT NOT NULL,
+  report_type TEXT NOT NULL,
+  response_token TEXT UNIQUE NOT NULL,
+  token_expires_at TIMESTAMPTZ NOT NULL,
+  submitted_at TIMESTAMPTZ,
+  planned_exercises INTEGER,
+  drink_ceiling INTEGER,
+  red_causes JSONB,
+  lever_next_week TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_tripwire_responses_token ON tripwire_responses(response_token);
+CREATE INDEX idx_tripwire_responses_week ON tripwire_responses(week_start, report_type);
+
+ALTER TABLE tripwire_responses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on tripwire_responses" ON tripwire_responses FOR ALL USING (true) WITH CHECK (true);
+```
+
 ### Session 7 Phase 3: Garmin Calendar feed (future)
 - User publishes their Garmin Connect training calendar (ICS feed)
 - Subscribe to it in Google Calendar

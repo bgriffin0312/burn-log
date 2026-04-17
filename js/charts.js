@@ -99,13 +99,13 @@ const Charts = {
         },
         scales: {
           x: {
-            ticks: { color: '#888', font: { size: 9, family: "'JetBrains Mono', monospace" }, maxRotation: 45 },
-            grid: { color: '#2a2a2a' }
+            ticks: { color: '#c0c0c0', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxRotation: 45 },
+            grid: { color: '#333' }
           },
           y: {
             beginAtZero: true,
-            ticks: { color: '#888', font: { size: 10, family: "'JetBrains Mono', monospace" } },
-            grid: { color: '#2a2a2a' }
+            ticks: { color: '#c0c0c0', font: { size: 11, family: "'JetBrains Mono', monospace" } },
+            grid: { color: '#333' }
           }
         }
       };
@@ -175,8 +175,8 @@ const Charts = {
           content: line.label,
           position: 'end',
           backgroundColor: 'transparent',
-          color: '#999',
-          font: { size: 9, family: "'JetBrains Mono', monospace" }
+          color: '#d0d0d0',
+          font: { size: 10, family: "'JetBrains Mono', monospace" }
         }
       };
     });
@@ -189,7 +189,7 @@ const Charts = {
           {
             label: title,
             data,
-            backgroundColor: data.map(() => color + "99"),
+            backgroundColor: data.map(() => color + "cc"),
             borderColor: color,
             borderWidth: 1,
             borderRadius: 3
@@ -203,8 +203,8 @@ const Charts = {
           title: {
             display: true,
             text: title,
-            color: '#bbb',
-            font: { size: 12, family: "'DM Sans', sans-serif", weight: '500' },
+            color: '#e8e8e8',
+            font: { size: 13, family: "'DM Sans', sans-serif", weight: '600' },
             padding: { bottom: 8 }
           },
           annotation: {

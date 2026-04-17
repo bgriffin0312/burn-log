@@ -14,7 +14,8 @@
   --bg-input: #1a1a1a;
   --border: #2a2a2a;
   --text: #e5e5e5;
-  --text-dim: #999;
+  --text-dim: #b8b8b8;
+  --text-helper: #a0a0a0;
   --accent: #a3e635;
   --danger: #ef4444;
   --max-width: 480px;
@@ -597,13 +598,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--text-dim);
   margin-top: 2px;
 }
 
 .entry-time {
-  color: #888;
+  color: var(--text-dim);
 }
 
 .delete-entry {
@@ -632,9 +633,9 @@ body {
 }
 
 .chip {
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 8px;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-family: 'JetBrains Mono', monospace;
   background: var(--bg);
   color: var(--text-dim);
@@ -719,13 +720,13 @@ body {
 
 .burn-steps-total {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  color: #22d3ee;
+  font-size: 0.78rem;
+  color: #67e8f9;
 }
 
 .burn-note {
-  font-size: 0.7rem;
-  color: #888;
+  font-size: 0.76rem;
+  color: var(--text-dim);
   margin-bottom: 8px;
 }
 
@@ -832,16 +833,16 @@ body {
 
 .burn-meta {
   display: block;
-  font-size: 0.68rem;
-  color: #888;
+  font-size: 0.74rem;
+  color: var(--text-dim);
   font-family: 'JetBrains Mono', monospace;
   margin-top: 1px;
 }
 
 .burn-cal {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: #f97316;
+  font-size: 0.8rem;
+  color: #fb923c;
 }
 
 .save-burn-preset {
@@ -892,21 +893,21 @@ body {
 }
 
 .garmin-badge {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  padding: 2px 8px;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 3px 9px;
   border-radius: 6px;
 }
 
 .garmin-sync-time {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-family: 'JetBrains Mono', monospace;
-  color: #888;
+  color: var(--text-dim);
 }
 
 .garmin-stats {
@@ -933,9 +934,9 @@ body {
 
 .garmin-stat-label {
   display: block;
-  font-size: 0.6rem;
-  color: #888;
-  margin-top: 1px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 
 /* ── Garmin Sleep Section ── */
@@ -954,15 +955,15 @@ body {
 }
 
 .garmin-section-label {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #888;
+  color: var(--text-dim);
 }
 
 .garmin-section-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--text);
 }
 
@@ -994,10 +995,10 @@ body {
 .sleep-legend-item {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.58rem;
+  gap: 4px;
+  font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
-  color: #888;
+  color: var(--text-dim);
 }
 
 .sleep-dot {
@@ -1023,9 +1024,9 @@ body {
 }
 
 .garmin-recovery-stat {
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-family: 'JetBrains Mono', monospace;
-  color: #888;
+  color: var(--text-dim);
   text-align: center;
 }
 
@@ -1063,8 +1064,8 @@ body {
 }
 
 .garmin-last-sync {
-  font-size: 0.68rem;
-  color: #888;
+  font-size: 0.74rem;
+  color: var(--text-dim);
   text-align: center;
   margin-top: 6px;
 }
@@ -1074,8 +1075,8 @@ body {
 .calorie-goal-note {
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: #f97316;
+  font-size: 0.72rem;
+  color: #fb923c;
   margin-top: 4px;
   margin-bottom: 12px;
 }
@@ -1086,12 +1087,12 @@ body {
   display: block;
   width: 100%;
   margin-top: 8px;
-  padding: 6px 0;
+  padding: 7px 0;
   background: none;
-  border: 1px dashed #333;
+  border: 1px dashed #444;
   border-radius: 8px;
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }

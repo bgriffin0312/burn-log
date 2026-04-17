@@ -622,8 +622,9 @@ def main():
     print(f"Data: {len(food)} food entries, {len(burns)} burn entries, {len(garmin)} garmin days")
 
     scorecard = compute_scorecard(food, burns, garmin, monday, end)
-    print(f"Scorecard: exercise={scorecard['exercise_days']}, drinks={scorecard['total_drinks']}, "
-          f"sleep={scorecard['avg_sleep']}, logged={scorecard['days_logged']}, reds={scorecard['red_count']}")
+    print(f"Scorecard: cardio={scorecard['cardio_days']}, lifts={scorecard['lift_days']}, "
+          f"drinks={scorecard['total_drinks']}, sleep={scorecard['avg_sleep']}, "
+          f"logged={scorecard['days_logged']}, reds={scorecard['red_count']}")
 
     # Store scorecard first — we need its id to link the response row
     scorecard_id = upsert_scorecard(supa, scorecard, report_type)
@@ -651,7 +652,8 @@ def main():
         now_ct = datetime.now(CENTRAL)
         event_dt = now_ct.replace(hour=18, minute=0, second=0, microsecond=0)
         ics = generate_ics("Weekend Plan \u2014 Exercise & Drinks", event_dt,
-                           f"Mon-Thu: {scorecard['exercise_days']} exercises, "
+                           f"Mon-Thu: {scorecard['cardio_days']} cardio, "
+                           f"{scorecard['lift_days']} lifts, "
                            f"{scorecard['total_drinks']} drinks. Plan your weekend.")
     else:
         # Sunday review
@@ -684,7 +686,8 @@ def main():
         now_ct = datetime.now(CENTRAL)
         event_dt = now_ct.replace(hour=20, minute=0, second=0, microsecond=0)
         ics = generate_ics("Weekly Scorecard \u2014 Burn Log", event_dt,
-                           f"Exercise: {scorecard['exercise_days']}, "
+                           f"Cardio: {scorecard['cardio_days']}, "
+                           f"Lifts: {scorecard['lift_days']}, "
                            f"Drinks: {scorecard['total_drinks']}, "
                            f"Sleep: {scorecard['avg_sleep']}h, "
                            f"Logged: {scorecard['days_logged']}/7")

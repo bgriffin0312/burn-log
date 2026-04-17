@@ -505,20 +505,26 @@ ALTER TABLE weekly_scorecards ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on weekly_scorecards" ON weekly_scorecards FOR ALL USING (true) WITH CHECK (true);
 ```
 
-### Session 9: Interactive Tripwire (in progress)
+### Session 9: Interactive Tripwire + split cardio/lift metrics
 - Tripwire emails are now two-way. Each Thursday/Sunday email includes a CTA button linking to `tripwire.html?token=<uuid>` on the PWA origin.
-- **Thursday form**: `planned_exercises` (Fri–Sun), `drink_ceiling`, optional notes.
+- **Split exercise tracking**: the single `exercise_days` metric from Session 8 was split into **cardio** (running/cycling/cardio/sports/other activity types — walking excluded as ambient) and **lifts** (strength). Each has its own rating row in the scorecard.
+  - Cardio: 4+ blue, 3 green, 2 yellow, 0-1 red
+  - Lifts: 3+ blue, 2 green, 1 yellow, 0 red
+  - Blue is a new stretch-goal tier beyond green; doesn't count as a red for cascade purposes
+  - `exercise_days` / `exercise_rating` columns on `weekly_scorecards` are no longer written (rows from Sessions 8-early-9 keep their historical values)
+- **Thursday form**: `planned_cardio`, `planned_lifts`, `drink_ceiling`, optional notes.
 - **Sunday form**: dropdown per red metric (illness / travel / social / work_stress / low_motivation / schedule_creep / other) stored in `red_causes` JSONB, plus a single `lever_next_week` text field and optional notes.
 - **Closure loop**:
   - Thursday email surfaces **last Sunday's `lever_next_week`** as accountability continuity.
-  - Sunday email compares **this same week's Thursday commitment** (`planned_exercises`, `drink_ceiling`) against the full-week scorecard, and additionally carries **last Sunday's `lever_next_week`** for continuity.
+  - Sunday email compares **this same week's Thursday commitment** (`planned_cardio`, `planned_lifts`, `drink_ceiling`) against the full-week scorecard, and additionally carries **last Sunday's `lever_next_week`** for continuity.
   - Same-type week-over-week comparison was deliberately avoided because Thursday commitments are weekend-scoped, not Mon-Thu scoped — evaluating them on Thursday is a category error.
 - **Token model**: Each email mints a per-week single-use `response_token` (base64url, 10-day TTL). Link is idempotent — re-running the workflow for the same week reuses the existing pending token. No auth beyond the token (single-user app).
 - **Files**: `tripwire.html`, `js/tripwire.js`, plus extensions to `scripts/weekly_tripwire.py`.
 - **New GitHub Secret required**: `APP_BASE_URL` (GitHub Pages URL, no trailing slash — e.g. `https://username.github.io/burn-log`). If not set, emails send without the interactive CTA (closure loop still works once responses exist).
 
-**SQL to run in Supabase** (required):
+**SQL to run in Supabase** (required — includes the split-metric migration):
 ```sql
+-- Response form (from initial Session 9)
 CREATE TABLE tripwire_responses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   scorecard_id UUID REFERENCES weekly_scorecards(id) ON DELETE CASCADE,
@@ -527,7 +533,9 @@ CREATE TABLE tripwire_responses (
   response_token TEXT UNIQUE NOT NULL,
   token_expires_at TIMESTAMPTZ NOT NULL,
   submitted_at TIMESTAMPTZ,
-  planned_exercises INTEGER,
+  planned_exercises INTEGER,      -- deprecated; superseded by planned_cardio + planned_lifts
+  planned_cardio INTEGER,
+  planned_lifts INTEGER,
   drink_ceiling INTEGER,
   red_causes JSONB,
   lever_next_week TEXT,
@@ -539,6 +547,26 @@ CREATE INDEX idx_tripwire_responses_week ON tripwire_responses(week_start, repor
 
 ALTER TABLE tripwire_responses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on tripwire_responses" ON tripwire_responses FOR ALL USING (true) WITH CHECK (true);
+
+-- Split cardio / lift metrics on weekly_scorecards
+ALTER TABLE weekly_scorecards
+  ADD COLUMN IF NOT EXISTS cardio_days INTEGER,
+  ADD COLUMN IF NOT EXISTS lift_days INTEGER,
+  ADD COLUMN IF NOT EXISTS cardio_rating TEXT,
+  ADD COLUMN IF NOT EXISTS lift_rating TEXT;
+```
+
+**If tripwire_responses already exists** (i.e. you already ran the SQL before the split), apply just this migration:
+```sql
+ALTER TABLE tripwire_responses
+  ADD COLUMN IF NOT EXISTS planned_cardio INTEGER,
+  ADD COLUMN IF NOT EXISTS planned_lifts INTEGER;
+
+ALTER TABLE weekly_scorecards
+  ADD COLUMN IF NOT EXISTS cardio_days INTEGER,
+  ADD COLUMN IF NOT EXISTS lift_days INTEGER,
+  ADD COLUMN IF NOT EXISTS cardio_rating TEXT,
+  ADD COLUMN IF NOT EXISTS lift_rating TEXT;
 ```
 
 ### Session 7 Phase 3: Garmin Calendar feed (future)

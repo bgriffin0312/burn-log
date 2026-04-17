@@ -29,10 +29,14 @@ CENTRAL = ZoneInfo("America/Chicago")
 DEFAULT_EMAIL = "bgriffin@texasappleseed.org"
 
 # Rating thresholds
-EXERCISE_THRESHOLDS = {"green": 3, "yellow": 2}  # >= green, >= yellow, else red
+# Cardio (running/cycling/swimming/sports/other — excludes walking): ≥4 blue, ≥3 green, 2 yellow, ≤1 red
+# Lifts (strength): ≥3 blue, ≥2 green, 1 yellow, 0 red
 ALCOHOL_THRESHOLDS = {"green": 7, "yellow": 14}   # <= green, <= yellow, else red
 SLEEP_THRESHOLDS = {"green": 7.0, "yellow": 6.0}  # >= green, >= yellow, else red
 LOGGING_THRESHOLDS = {"green": 7, "yellow": 5}     # >= green, >= yellow, else red
+
+CARDIO_ACTIVITY_TYPES = {"running", "cycling", "cardio", "sports", "other"}
+LIFT_ACTIVITY_TYPES = {"strength"}
 
 
 def get_env(name):
@@ -90,54 +94,51 @@ def fetch_week_data(supa, start, end):
 
 def compute_scorecard(food, burns, garmin, start, end):
     """Compute scorecard metrics from raw data."""
-    # Build list of all dates in range
     num_days = (end - start).days + 1
     all_dates = [(start + timedelta(days=i)).isoformat() for i in range(num_days)]
 
-    # Exercise days: distinct dates with manual burn entries
-    exercise_dates = set(b["date"] for b in burns if b.get("source") == "manual")
-    exercise_days = len(exercise_dates)
+    manual_burns = [b for b in burns if b.get("source") == "manual"]
+    cardio_dates = set(b["date"] for b in manual_burns
+                       if (b.get("activity_type") or "other") in CARDIO_ACTIVITY_TYPES)
+    lift_dates = set(b["date"] for b in manual_burns
+                     if (b.get("activity_type") or "") in LIFT_ACTIVITY_TYPES)
+    cardio_days = len(cardio_dates)
+    lift_days = len(lift_dates)
 
-    # Total standard drinks
     total_drinks = sum(f.get("standard_drinks", 0) or 0 for f in food)
 
-    # Average sleep from Garmin
     sleep_values = [g["sleep_hours"] for g in garmin
                     if g.get("sleep_hours") and g["sleep_hours"] > 0]
     avg_sleep = round(sum(sleep_values) / len(sleep_values), 1) if sleep_values else None
 
-    # Logging completeness: dates with at least one food entry
     food_dates = set(f["date"] for f in food)
     days_logged = len(food_dates)
 
-    # Missing data: dates with NO food AND NO manual exercise
+    # Missing data: any activity would mark the day as present
+    any_activity_dates = cardio_dates | lift_dates
     drink_dates = set(f["date"] for f in food if (f.get("standard_drinks", 0) or 0) > 0)
-    missing_days = []
-    for d in all_dates:
-        has_food = d in food_dates
-        has_exercise = d in exercise_dates
-        has_drinks = d in drink_dates
-        if not has_food and not has_exercise and not has_drinks:
-            missing_days.append(d)
+    missing_days = [d for d in all_dates
+                    if d not in food_dates and d not in any_activity_dates and d not in drink_dates]
 
-    # Apply ratings
-    exercise_rating = rate_exercise(exercise_days)
+    cardio_rating = rate_cardio(cardio_days)
+    lift_rating = rate_lifts(lift_days)
     alcohol_rating = rate_alcohol(total_drinks)
     sleep_rating = rate_sleep(avg_sleep)
     logging_rating = rate_logging(days_logged, num_days)
 
-    # Count reds
-    ratings = [exercise_rating, alcohol_rating, sleep_rating, logging_rating]
+    ratings = [cardio_rating, lift_rating, alcohol_rating, sleep_rating, logging_rating]
     red_count = sum(1 for r in ratings if r == "red")
 
     return {
         "week_start": start.isoformat(),
         "week_end": end.isoformat(),
-        "exercise_days": exercise_days,
+        "cardio_days": cardio_days,
+        "lift_days": lift_days,
         "total_drinks": round(total_drinks, 1),
         "avg_sleep": avg_sleep,
         "days_logged": days_logged,
-        "exercise_rating": exercise_rating,
+        "cardio_rating": cardio_rating,
+        "lift_rating": lift_rating,
         "alcohol_rating": alcohol_rating,
         "sleep_rating": sleep_rating,
         "logging_rating": logging_rating,
@@ -146,10 +147,22 @@ def compute_scorecard(food, burns, garmin, start, end):
     }
 
 
-def rate_exercise(days):
-    if days >= EXERCISE_THRESHOLDS["green"]:
+def rate_cardio(days):
+    if days >= 4:
+        return "blue"
+    if days >= 3:
         return "green"
-    if days >= EXERCISE_THRESHOLDS["yellow"]:
+    if days == 2:
+        return "yellow"
+    return "red"
+
+
+def rate_lifts(days):
+    if days >= 3:
+        return "blue"
+    if days >= 2:
+        return "green"
+    if days == 1:
         return "yellow"
     return "red"
 
@@ -237,11 +250,21 @@ def format_date_short(iso_date):
 
 def rating_color(rating):
     """Return hex color for rating."""
-    return {"green": "#22c55e", "yellow": "#eab308", "red": "#ef4444"}.get(rating, "#888")
+    return {
+        "blue": "#3b82f6",
+        "green": "#22c55e",
+        "yellow": "#eab308",
+        "red": "#ef4444",
+    }.get(rating, "#888")
 
 
 def rating_emoji(rating):
-    return {"green": "\u2705", "yellow": "\u26a0\ufe0f", "red": "\u274c"}.get(rating, "")
+    return {
+        "blue": "\U0001f4aa",
+        "green": "\u2705",
+        "yellow": "\u26a0\ufe0f",
+        "red": "\u274c",
+    }.get(rating, "")
 
 
 def _cta_button_html(label, url):
@@ -274,8 +297,16 @@ def build_thursday_email(scorecard, food, burns, response_url=None, prior_sunday
 
     prior_sunday_response: last week's submitted Sunday review (carries lever_next_week).
     """
-    exercise = scorecard["exercise_days"]
+    cardio = scorecard["cardio_days"]
+    lifts = scorecard["lift_days"]
     drinks = scorecard["total_drinks"]
+
+    def stat_color(rating):
+        return rating_color(rating)
+
+    cardio_c = stat_color(rate_cardio(cardio))
+    lift_c = stat_color(rate_lifts(lifts))
+    drink_c = "#22c55e" if drinks <= 4 else "#eab308" if drinks <= 7 else "#ef4444"
 
     closure_html = _lever_panel_html(
         (prior_sunday_response or {}).get("lever_next_week"))
@@ -293,13 +324,17 @@ def build_thursday_email(scorecard, food, burns, response_url=None, prior_sunday
 
     <div style="background:#141414; border:1px solid #262626; border-radius:10px; padding:16px; margin:16px 0;">
       <h2 style="color:#d4d4d4; font-size:15px; margin:0 0 12px 0;">Mon&ndash;Thu So Far</h2>
-      <div style="display:flex; gap:24px;">
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
         <div>
-          <div style="font-family:monospace; font-size:28px; color:{'#22c55e' if exercise >= 2 else '#eab308' if exercise >= 1 else '#ef4444'};">{exercise}</div>
-          <div style="font-size:12px; color:#737373;">exercise sessions</div>
+          <div style="font-family:monospace; font-size:28px; color:{cardio_c};">{cardio}</div>
+          <div style="font-size:12px; color:#737373;">cardio</div>
         </div>
         <div>
-          <div style="font-family:monospace; font-size:28px; color:{'#22c55e' if drinks <= 4 else '#eab308' if drinks <= 7 else '#ef4444'};">{drinks}</div>
+          <div style="font-family:monospace; font-size:28px; color:{lift_c};">{lifts}</div>
+          <div style="font-size:12px; color:#737373;">lifts</div>
+        </div>
+        <div>
+          <div style="font-family:monospace; font-size:28px; color:{drink_c};">{drinks}</div>
           <div style="font-size:12px; color:#737373;">standard drinks</div>
         </div>
       </div>
@@ -308,7 +343,7 @@ def build_thursday_email(scorecard, food, burns, response_url=None, prior_sunday
     <div style="background:#141414; border:1px solid #262626; border-radius:10px; padding:16px; margin:16px 0;">
       <h2 style="color:#d4d4d4; font-size:15px; margin:0 0 8px 0;">Weekend Pre-Commit</h2>
       <p style="color:#a3a3a3; font-size:14px; line-height:1.5; margin:0;">
-        How many runs or lifts are you planning Fri&ndash;Sun?<br>
+        How many cardio and lifting sessions Fri&ndash;Sun?<br>
         What&rsquo;s your drink ceiling for the weekend?
       </p>
     </div>
@@ -335,8 +370,10 @@ def build_sunday_email(scorecard, cascade_level, response_url=None,
     missing = json.loads(scorecard.get("missing_days", "[]"))
 
     metrics = [
-        ("Exercise", f"{scorecard['exercise_days']} sessions", scorecard["exercise_rating"],
-         "3+ green, 2 yellow, 0-1 red"),
+        ("Cardio", f"{scorecard['cardio_days']} sessions", scorecard["cardio_rating"],
+         "4+ blue, 3 green, 2 yellow, 0-1 red"),
+        ("Lifts", f"{scorecard['lift_days']} sessions", scorecard["lift_rating"],
+         "3+ blue, 2 green, 1 yellow, 0 red"),
         ("Alcohol", f"{scorecard['total_drinks']} drinks", scorecard["alcohol_rating"],
          "\u22647 green, 8-14 yellow, 15+ red"),
         ("Sleep", f"{scorecard['avg_sleep']}h avg" if scorecard["avg_sleep"] else "No data",
@@ -395,15 +432,21 @@ def build_sunday_email(scorecard, cascade_level, response_url=None,
     # Commitment check: compare this week's Thursday pre-commit vs full-week actuals
     commitment_html = ""
     if same_week_thursday_response:
-        planned = same_week_thursday_response.get("planned_exercises")
-        ceiling = same_week_thursday_response.get("drink_ceiling")
-        exercise_actual = scorecard["exercise_days"]
-        drinks_actual = scorecard["total_drinks"]
+        r = same_week_thursday_response
         bits = []
-        if planned is not None:
-            icon = "\u2705" if exercise_actual >= planned else "\u274c"
-            bits.append(f"{icon} Exercise: committed {planned}, logged {exercise_actual}")
-        if ceiling is not None:
+        if r.get("planned_cardio") is not None:
+            actual = scorecard["cardio_days"]
+            planned = r["planned_cardio"]
+            icon = "\u2705" if actual >= planned else "\u274c"
+            bits.append(f"{icon} Cardio: committed {planned}, logged {actual}")
+        if r.get("planned_lifts") is not None:
+            actual = scorecard["lift_days"]
+            planned = r["planned_lifts"]
+            icon = "\u2705" if actual >= planned else "\u274c"
+            bits.append(f"{icon} Lifts: committed {planned}, logged {actual}")
+        if r.get("drink_ceiling") is not None:
+            drinks_actual = scorecard["total_drinks"]
+            ceiling = r["drink_ceiling"]
             icon = "\u2705" if drinks_actual <= ceiling else "\u274c"
             bits.append(f"{icon} Drinks: ceiling {ceiling}, at {drinks_actual}")
         if bits:

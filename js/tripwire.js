@@ -96,7 +96,8 @@
   function summarizeSubmission(r) {
     if (r.report_type === "thursday_check") {
       return `
-        <div class="rating-row"><span class="label">Planned exercise sessions</span><span class="value">${escapeHtml(valueOrDash(r.planned_exercises))}</span></div>
+        <div class="rating-row"><span class="label">Planned cardio</span><span class="value">${escapeHtml(valueOrDash(r.planned_cardio))}</span></div>
+        <div class="rating-row"><span class="label">Planned lifts</span><span class="value">${escapeHtml(valueOrDash(r.planned_lifts))}</span></div>
         <div class="rating-row"><span class="label">Drink ceiling</span><span class="value">${escapeHtml(valueOrDash(r.drink_ceiling))}</span></div>
         ${r.notes ? `<div class="note">Notes: ${escapeHtml(r.notes)}</div>` : ""}
       `;
@@ -119,15 +120,19 @@
 
       <div class="card">
         <h2>Mon–Thu so far</h2>
-        <div class="rating-row"><span class="label">Exercise sessions</span><span class="value">${scorecard.exercise_days}</span></div>
+        <div class="rating-row"><span class="label">Cardio sessions</span><span class="value">${scorecard.cardio_days ?? 0}</span></div>
+        <div class="rating-row"><span class="label">Lift sessions</span><span class="value">${scorecard.lift_days ?? 0}</span></div>
         <div class="rating-row"><span class="label">Standard drinks</span><span class="value">${scorecard.total_drinks}</span></div>
       </div>
 
       <form id="form">
         <div class="card">
           <h2>Fri–Sun plan</h2>
-          <label for="planned">Planned runs or lifts (Fri–Sun)</label>
-          <input type="number" id="planned" name="planned_exercises" min="0" max="10" step="1" required>
+          <label for="planned_cardio">Planned cardio sessions (running, cycling, swimming, etc.)</label>
+          <input type="number" id="planned_cardio" name="planned_cardio" min="0" max="10" step="1" required>
+
+          <label for="planned_lifts">Planned lifting sessions</label>
+          <input type="number" id="planned_lifts" name="planned_lifts" min="0" max="10" step="1" required>
 
           <label for="ceiling">Weekend drink ceiling (standard drinks)</label>
           <input type="number" id="ceiling" name="drink_ceiling" min="0" max="30" step="1" required>
@@ -147,7 +152,8 @@
       btn.disabled = true;
       btn.textContent = "Saving…";
       const data = {
-        planned_exercises: parseInt(document.getElementById("planned").value, 10),
+        planned_cardio: parseInt(document.getElementById("planned_cardio").value, 10),
+        planned_lifts: parseInt(document.getElementById("planned_lifts").value, 10),
         drink_ceiling: parseInt(document.getElementById("ceiling").value, 10),
         notes: document.getElementById("notes").value.trim() || null,
         submitted_at: new Date().toISOString(),
@@ -171,7 +177,8 @@
 
   function renderSundayForm(supa, response, scorecard) {
     const ratings = [
-      ["exercise", "Exercise", `${scorecard.exercise_days} sessions`, scorecard.exercise_rating],
+      ["cardio", "Cardio", `${scorecard.cardio_days ?? 0} sessions`, scorecard.cardio_rating],
+      ["lifts", "Lifts", `${scorecard.lift_days ?? 0} sessions`, scorecard.lift_rating],
       ["alcohol", "Alcohol", `${scorecard.total_drinks} drinks`, scorecard.alcohol_rating],
       ["sleep", "Sleep", scorecard.avg_sleep ? `${scorecard.avg_sleep}h avg` : "No data", scorecard.sleep_rating],
       ["logging", "Logging", `${scorecard.days_logged}/7 days`, scorecard.logging_rating],

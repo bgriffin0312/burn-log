@@ -348,15 +348,11 @@ const App = {
       this.photoFile = null;
 
       const dt = this.entryDateTime();
-      console.log("[handleFoodInput] viewing=", this.currentDate, "dt=", dt, "items=", result.items?.length);
       for (const item of result.items) {
         const entry = buildEntryFromClaude(item, dt);
         const saved = await addFoodEntry(entry);
-        console.log("[handleFoodInput] saved row=", saved);
         this.entries.push(saved);
       }
-      const sumCal = this.entries.reduce((s, e) => s + (e.calories || 0), 0);
-      console.log("[handleFoodInput] entries.length=", this.entries.length, "sum cal=", sumCal);
       this.render();
 
       if (result.notes) {
@@ -386,19 +382,13 @@ const App = {
     const preset = allPresets[key];
     if (!preset) return;
 
-    const dt = this.entryDateTime();
-    const entry = buildEntryFromPreset(key, preset, dt);
-    console.log("[addPreset] viewing=", this.currentDate, "entry.date=", entry.date, "cal=", entry.calories);
+    const entry = buildEntryFromPreset(key, preset, this.entryDateTime());
     try {
       const saved = await addFoodEntry(entry);
-      console.log("[addPreset] saved row=", saved);
       this.entries.push(saved);
-      const sumCal = this.entries.reduce((s, e) => s + (e.calories || 0), 0);
-      console.log("[addPreset] entries.length=", this.entries.length, "sum cal=", sumCal);
       this.render();
     } catch (err) {
       console.error("Failed to add entry:", err);
-      alert("Failed to add entry: " + (err?.message || err));
     }
   },
 

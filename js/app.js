@@ -322,6 +322,11 @@ const App = {
     });
   },
 
+  entryDateTime() {
+    const isToday = this.currentDate === todayString();
+    return { date: this.currentDate, time: isToday ? nowTimeString() : null };
+  },
+
   async handleFoodInput(text) {
     const key = text.toLowerCase();
     const allPresets = { ...DEFAULT_PRESETS, ...this.customPresets };
@@ -342,8 +347,9 @@ const App = {
       const result = await estimateWithClaude(text, this.photoFile);
       this.photoFile = null;
 
+      const dt = this.entryDateTime();
       for (const item of result.items) {
-        const entry = buildEntryFromClaude(item);
+        const entry = buildEntryFromClaude(item, dt);
         const saved = await addFoodEntry(entry);
         this.entries.push(saved);
       }
@@ -376,7 +382,7 @@ const App = {
     const preset = allPresets[key];
     if (!preset) return;
 
-    const entry = buildEntryFromPreset(key, preset);
+    const entry = buildEntryFromPreset(key, preset, this.entryDateTime());
     try {
       const saved = await addFoodEntry(entry);
       this.entries.push(saved);
@@ -477,9 +483,10 @@ const App = {
 
   async addBurn(name, calories, extra) {
     try {
+      const { date, time } = this.entryDateTime();
       const saved = await addBurnEntry({
-        date: todayString(),
-        time: nowTimeString(),
+        date,
+        time,
         name,
         calories,
         activity_type: extra?.activity_type || "other",

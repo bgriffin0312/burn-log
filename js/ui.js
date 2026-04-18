@@ -84,7 +84,7 @@ const UI = {
 
   // ── Entry Card ──
 
-  renderEntry(entry, isToday) {
+  renderEntry(entry) {
     const time = entry.time ? entry.time : '';
     const nutrients = [
       { value: entry.calories, unit: 'kcal', cls: 'cal' },
@@ -107,7 +107,7 @@ const UI = {
               ${time ? `<span class="entry-time">${time}</span>` : ''}
             </span>
           </div>
-          ${isToday ? `<button class="delete-entry" data-id="${entry.id}" aria-label="Delete entry">&times;</button>` : ''}
+          <button class="delete-entry" data-id="${entry.id}" aria-label="Delete entry">&times;</button>
         </div>
         <div class="entry-nutrients">
           ${nutrients
@@ -115,7 +115,7 @@ const UI = {
             .map(n => `<span class="chip ${n.cls}">${Math.round(n.value)} ${n.unit}</span>`)
             .join('')}
         </div>
-        ${entry.from_claude && isToday && !entry.preset_key ? `<button class="save-preset-btn" data-id="${entry.id}">&#x1F4BE; Save as shortcut</button>` : ''}
+        ${entry.from_claude && !entry.preset_key ? `<button class="save-preset-btn" data-id="${entry.id}">&#x1F4BE; Save as shortcut</button>` : ''}
       </div>
     `;
   },
@@ -224,7 +224,7 @@ const UI = {
     `;
   },
 
-  renderBurnSection(burns, burnPresets, isToday, garminData) {
+  renderBurnSection(burns, burnPresets, garminData) {
     const totalBurned = burns.reduce((sum, b) => sum + (b.calories || 0), 0);
     const totalSteps = burns.reduce((sum, b) => sum + (b.steps || 0), 0);
 
@@ -236,7 +236,6 @@ const UI = {
         </div>
         <p class="burn-note">Active calories above resting</p>
         ${this.renderGarminCard(garminData)}
-        ${isToday ? `
         <form id="burn-form">
           <input type="text" id="burn-input" placeholder="e.g. ran 3 miles, 30 min strength..." autocomplete="off">
           <button type="submit" class="burn-add-btn">+</button>
@@ -247,7 +246,6 @@ const UI = {
             `<button class="burn-chip" data-key="${key}">${p.name} (${Math.round(p.calories)})</button>`
           ).join('')}
         </div>
-        ` : ''}
         ` : ''}
         ${burns.length > 0 ? `
         <div class="burn-list">
@@ -263,7 +261,7 @@ const UI = {
                 ${meta.length > 0 ? `<span class="burn-meta">${meta.join(' · ')}</span>` : ''}
               </div>
               <span class="burn-cal">${Math.round(b.calories)} kcal</span>
-              ${isToday && b.source !== 'garmin' ? `
+              ${b.source !== 'garmin' ? `
                 <button class="save-burn-preset" data-id="${b.id}" title="Save as shortcut">&#x1F4BE;</button>
                 <button class="delete-burn" data-id="${b.id}">&times;</button>
               ` : ''}
@@ -447,15 +445,15 @@ const UI = {
             ${totalDrinks > 0 ? `<div class="daily-drinks"><span class="drinks-icon">&#x1F37A;</span> ${totalDrinks.toFixed(1)} standard drinks today</div>` : ''}
           </div>
 
-          ${isToday ? this.renderInputArea(customPresets) : ''}
+          ${this.renderInputArea(customPresets)}
 
-          ${this.renderBurnSection(burns || [], burnPresets || {}, isToday, garminData)}
+          ${this.renderBurnSection(burns || [], burnPresets || {}, garminData)}
 
           <div class="entries-list">
             <h2>Entries${entries.length > 0 ? ` (${entries.length})` : ''}</h2>
             ${entries.length === 0
-              ? `<p class="empty">${isToday ? 'No entries yet. Tap a chip or type a food above.' : 'No entries for this day.'}</p>`
-              : entries.map(e => this.renderEntry(e, isToday)).join('')}
+              ? `<p class="empty">No entries yet. Tap a chip or type a food above.</p>`
+              : entries.map(e => this.renderEntry(e)).join('')}
           </div>
         ` : tab === 'trends' ? `
           <div id="trends-container" class="trends-container"></div>

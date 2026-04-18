@@ -192,10 +192,10 @@ function nowTimeString() {
   return new Date().toTimeString().slice(0, 5);
 }
 
-function buildEntryFromPreset(key, preset) {
+function buildEntryFromPreset(key, preset, { date, time } = {}) {
   return {
-    date: todayString(),
-    time: nowTimeString(),
+    date: date || todayString(),
+    time: time !== undefined ? time : nowTimeString(),
     name: preset.name,
     portion: preset.portion,
     calories: preset.calories,
@@ -211,10 +211,10 @@ function buildEntryFromPreset(key, preset) {
   };
 }
 
-function buildEntryFromClaude(item) {
+function buildEntryFromClaude(item, { date, time } = {}) {
   return {
-    date: todayString(),
-    time: nowTimeString(),
+    date: date || todayString(),
+    time: time !== undefined ? time : nowTimeString(),
     name: item.name,
     portion: item.portion || "",
     calories: item.calories || 0,

@@ -686,6 +686,7 @@ const App = {
       this.render();
     } catch (err) {
       console.error("Failed to load entries:", err);
+    } finally {
       main.style.opacity = "1";
     }
   }

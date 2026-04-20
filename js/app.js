@@ -47,6 +47,7 @@ const App = {
       this.loadBurnPresets();
       await this.syncGarminBurns();
       this.render();
+      this.wireVisibilityRefresh();
 
       // Track when the user started logging
       if (!localStorage.getItem("burnlog_start_date")) {
@@ -668,6 +669,25 @@ const App = {
     if (newDate > todayString()) return;
     this.currentDate = newDate;
     await this.loadDate();
+  },
+
+  wireVisibilityRefresh() {
+    if (this._visibilityWired) return;
+    this._visibilityWired = true;
+    let lastToday = todayString();
+    let lastRefreshAt = Date.now();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefreshAt < 2000) return;
+      lastRefreshAt = now;
+      const newToday = todayString();
+      if (this.currentDate === lastToday && newToday !== lastToday) {
+        this.currentDate = newToday;
+      }
+      lastToday = newToday;
+      this.loadDate();
+    });
   },
 
   async loadDate() {
